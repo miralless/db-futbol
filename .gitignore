@@ -1,0 +1,16 @@
+# Node modules
+node_modules/
+
+# Archivos de configuración de Firebase
+firebaseConfig.js
+
+# Logs
+*.log
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Build / dist
+dist/
+build/
