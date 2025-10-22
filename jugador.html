@@ -141,6 +141,11 @@ async function cargarDetalle() {
     filaEquipoDorsal.appendChild(dorsalDiv);
     contenedor.appendChild(filaEquipoDorsal);
 
+    // Evento para ir a equipo.html con el nombre del equipo
+    equipoDiv.addEventListener("click", () => {
+      window.location.href = `equipo.html?team=${encodeURIComponent(equipoData.nombre)}`;
+    });
+
     // === Fila 3: Estadísticas ===
     if (personaId === "01" || personaId === "04") {
       mostrarDatosMagic(persona.nombre.toLowerCase(), contenedor);
