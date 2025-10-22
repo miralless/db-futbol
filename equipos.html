@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Equipos</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .content {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      width: 100%;
+    }
+
+    .team-card {
+      background-color: #1a1a1a;
+      color: white;
+      padding: 20px 25px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      font-size: 1rem;
+      font-weight: 500;
+      min-width: 180px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      cursor: pointer;
+      flex: 1;
+      width: 100%;
+      height: fit-content;
+      padding-top: 10%;
+      padding-bottom: 10%;
+    }
+
+    .team-card:hover {
+      transform: scale(1.03);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+  </style>
+</head>
+<body>
+  <header class="navbar">
+    <h1 class="logo">DB Football 2025/26</h1>
+    <nav class="menu">
+      <a href="index.html">Inicio</a>
+    </nav>
+  </header>
+
+  <div class="content">
+    <!-- Aquí aparecerán los equipos -->
+  </div>
+
+  <footer class="footer">
+    <p>© 2025 DB Football. Todos los derechos reservados.</p>
+  </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDpjK4HsS4X4XmTzdjnRTTjlPJBuXzXAw4",
+      authDomain: "db-futbol.firebaseapp.com",
+      projectId: "db-futbol",
+      storageBucket: "db-futbol.appspot.com",
+      messagingSenderId: "533304962889",
+      appId: "1:533304962889:web:86243092a1ddcf89323498"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function cargarEquipos() {
+      const contenedor = document.querySelector('.content');
+      contenedor.innerHTML = "";
+
+      // Si los datos de los equipos están también en localStorage (magicEquipos)
+      const magicEquipos = JSON.parse(localStorage.getItem("magicEquipos"))?.matches || [];
+
+      const querySnapshot = await getDocs(collection(db, "Equipos"));
+      querySnapshot.forEach((doc) => {
+        const equipo = doc.data();
+        const nombreEquipo = equipo.nombre;
+
+        const teamDiv = document.createElement('div');
+        teamDiv.classList.add('team-card');
+        teamDiv.innerHTML = `<h3>${nombreEquipo}</h3>`;
+
+        // Evento para ir a equipo.html con el nombre del equipo
+        teamDiv.addEventListener("click", () => {
+          window.location.href = `equipo.html?team=${encodeURIComponent(nombreEquipo)}`;
+        });
+
+        contenedor.appendChild(teamDiv);
+      });
+    }
+
+    cargarEquipos();
+  </script>
+</body>
+</html>

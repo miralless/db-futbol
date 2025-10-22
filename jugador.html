@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Detalle del Jugador</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Estructura general */
+    .content {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 25px;
+      padding: 20px;
+      width: 100%;
+    }
+
+    .point {
+      cursor: pointer;
+    }
+
+    /* Contenedores de filas */
+    .fila {
+      display: flex;
+      gap: 20px;
+      width: 100%;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    /* Igual que los .item de index */
+    .info-box, .stat-item {
+      background-color: #1a1a1a;
+      color: white;
+      padding: 20px 25px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      font-size: 1rem;
+      font-weight: 500;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      text-align: center;
+      flex: 1;
+    }
+
+    .info-box {
+      height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stat-item {
+      height: fit-content;
+      padding-top: 5%;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1.3rem;
+    }
+
+    @media (min-width: 600px) {
+      .stat-item {
+        padding-bottom: 5%;
+      }
+    }
+  </style>
+</head>
+<body>
+<header class="navbar">
+  <h1 class="logo">DB Football 2025/26</h1>
+  <nav class="menu">
+    <a href="index.html">Inicio</a>
+    <a href="equipos.html">Equipos</a>
+  </nav>
+</header>
+
+<div class="content"></div>
+
+<footer class="footer">
+  <p>© 2025 DB Football. Todos los derechos reservados.</p>
+</footer>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+// ==== CONFIG FIREBASE ====
+const firebaseConfig = {
+  apiKey: "AIzaSyDpjK4HsS4X4XmTzdjnRTTjlPJBuXzXAw4",
+  authDomain: "db-futbol.firebaseapp.com",
+  projectId: "db-futbol",
+  storageBucket: "db-futbol.appspot.com",
+  messagingSenderId: "533304962889",
+  appId: "1:533304962889:web:86243092a1ddcf89323498",
+  measurementId: "G-4SQBWRELL7"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ==== OBTENER ID DEL JUGADOR DESDE LA URL ====
+const params = new URLSearchParams(window.location.search);
+const personaId = params.get("id");
+
+// ==== CARGAR DETALLES ====
+async function cargarDetalle() {
+  const contenedor = document.querySelector(".content");
+
+  if (!personaId) {
+    contenedor.innerHTML = "<p>Error: no se especificó una persona.</p>";
+    return;
+  }
+
+  const docRef = doc(db, "Personas", personaId);
+  const docSnap = await getDoc(docRef);
+
+  if (docSnap.exists()) {
+    const persona = docSnap.data();
+    const equipoRef = persona.equipo;
+    const equipoSnap = await getDoc(equipoRef);
+    const equipoData = equipoSnap.data();
+
+    // === Fila 1: Nombre y Apellido ===
+    const filaNombre = document.createElement("div");
+    filaNombre.classList.add("fila");
+
+    const nombreDiv = document.createElement("div");
+    nombreDiv.classList.add("info-box");
+    nombreDiv.innerHTML = `<h2>${persona.nombre} ${persona.apellido}</h2>`;
+
+    filaNombre.appendChild(nombreDiv);
+    contenedor.appendChild(filaNombre);
+
+    // === Fila 2: Equipo y Dorsal ===
+    const filaEquipoDorsal = document.createElement("div");
+    filaEquipoDorsal.classList.add("fila");
+
+    const equipoDiv = document.createElement("div");
+    equipoDiv.classList.add("info-box");
+    equipoDiv.classList.add("point");
+    equipoDiv.innerHTML = `<h2>${equipoData.nombre || "-"}</h2>`;
+
+    const dorsalDiv = document.createElement("div");
+    dorsalDiv.classList.add("info-box");
+    dorsalDiv.innerHTML = `<h2>#${persona.dorsal || "-"}</h2>`;
+
+    filaEquipoDorsal.appendChild(equipoDiv);
+    filaEquipoDorsal.appendChild(dorsalDiv);
+    contenedor.appendChild(filaEquipoDorsal);
+
+    // === Fila 3: Estadísticas ===
+    if (personaId === "01" || personaId === "04") {
+      mostrarDatosMagic(persona.nombre.toLowerCase(), contenedor);
+    }
+
+    if (personaId === "02") {
+      mostrarDatosMagic2(persona.nombre.toLowerCase(), contenedor);
+    }
+
+    if (personaId === "03" || personaId === "05" || personaId === "06") {
+      personaId === "03" ? mostrarDatosMagic3(persona.nombre.toLowerCase(), contenedor, 2) : personaId === "05" ? mostrarDatosMagic3(persona.nombre.toLowerCase(), contenedor, 0) : mostrarDatosMagic3(persona.nombre.toLowerCase(), contenedor, 1);
+    }
+
+  } else {
+    contenedor.innerHTML = "<p>No se encontró la persona.</p>";
+  }
+}
+
+// ==== MOSTRAR DATOS DEL LOCALSTORAGE ====
+function mostrarDatosMagic(nombreJugador, contenedor) {
+  const datos = JSON.parse(localStorage.getItem("datosMagic"));
+  if (!datos || !datos[nombreJugador]) {
+    console.warn("⚠️ No hay datos en localStorage para:", nombreJugador);
+    return;
+  }
+
+  const stats = datos[nombreJugador];
+  console.log("📊 Datos del jugador:", stats);
+
+  const statsContainer = document.createElement("div");
+  statsContainer.classList.add("fila");
+
+  // Crear los 4 divs (goles, partidos, minutos, tarjetas)
+  const campos = ["goles", "partidos", "minutos", "tarjetas"];
+  campos.forEach(campo => {
+    const statDiv = document.createElement("div");
+    statDiv.classList.add("stat-item");
+    statDiv.innerHTML = `<strong style="text-decoration: underline;">${campo.toUpperCase()}</strong><br><br><p style="font-size: 18px; font-style: italic;">${stats[campo] ?? "-"}</p>`;
+    statsContainer.appendChild(statDiv);
+  });
+
+  contenedor.appendChild(statsContainer);
+}
+
+function mostrarDatosMagic2(nombreJugador, contenedor) {
+  const datos = JSON.parse(localStorage.getItem("datosMagic"));
+  if (!datos || !datos[nombreJugador]) {
+    console.warn("⚠️ No hay datos en localStorage para:", nombreJugador);
+    return;
+  }
+
+  const stats = datos[nombreJugador];
+  console.log("📊 Datos del jugador:", stats);
+
+  const statsContainer = document.createElement("div");
+  statsContainer.classList.add("fila");
+
+  // Crear los 4 divs (goles, partidos, minutos, tarjetas)
+  const campos = ["goles concedidos", "partidos", "minutos", "tarjetas"];
+  campos.forEach(campo => {
+    const statDiv = document.createElement("div");
+    statDiv.classList.add("stat-item");
+    if (campo === "goles concedidos") {
+      statDiv.innerHTML = `<strong style="text-decoration: underline; font-size: 15px;">GOLES RECIB.</strong><br><br><p style="font-size: 18px; font-style: italic;">${stats[campo] ?? "-"}</p>`;
+      statsContainer.appendChild(statDiv);
+    } else {
+      statDiv.innerHTML = `<strong style="text-decoration: underline; font-size: 15px;">${campo.toUpperCase()}</strong><br><br><p style="font-size: 18px; font-style: italic;">${stats[campo] ?? "-"}</p>`;
+      statsContainer.appendChild(statDiv);
+    }
+  });
+
+  contenedor.appendChild(statsContainer);
+}
+
+function mostrarDatosMagic3(nombreJugador, contenedor, numeroArray) {
+  const datos = JSON.parse(localStorage.getItem("datosMagic"));
+  if (!datos || !datos.fvf_stats[0] || !datos.fvf_stats[1] || !datos.fvf_stats[2]) {
+    console.warn("⚠️ No hay datos en localStorage para:", nombreJugador);
+    return;
+  }
+
+  const stats = datos.fvf_stats[numeroArray];
+  console.log("📊 Datos del jugador:", stats);
+
+  const statsContainer = document.createElement("div");
+  statsContainer.classList.add("fila");
+
+  // Crear los 4 divs (goles, partidos, minutos, tarjetas)
+  const campos = ["goles total", "jugados", "titular", "suplente", "tarjeta amarilla", "doble tarjeta amarilla", "tarjeta roja"];
+  var creaDiv = true;
+  var tarjetasRojas = 0;
+  campos.forEach(campo => {
+    const statDiv = document.createElement("div");
+    statDiv.classList.add("stat-item");
+    if (campo === "jugados") {
+      statDiv.innerHTML = `<strong style="text-decoration: underline; font-size: 15px;">PARTIDOS</strong><br><br><p style="font-size: 18px; font-style: italic;">${stats[campo] ?? "-"}</p>`;
+      statsContainer.appendChild(statDiv);
+    } else if (campo === "tarjeta amarilla") {
+      statDiv.innerHTML = `<strong style="text-decoration: underline; font-size: 15px;">AMARILLAS</strong><br><br><p style="font-size: 18px; font-style: italic;">${stats[campo] ?? "-"}</p>`;
+      statsContainer.appendChild(statDiv);
+    } else if (campo === "tarjeta roja" || campo === "doble tarjeta amarilla") {
+      if (creaDiv) {
+        tarjetasRojas = (stats["tarjeta roja"] ?? 0) + (stats["doble tarjeta amarilla"] ?? 0);
+        statDiv.innerHTML = `<strong style="text-decoration: underline; font-size: 15px;">ROJAS</strong><br><br><p style="font-size: 18px; font-style: italic;">${tarjetasRojas ?? "-"}</p>`;
+        statsContainer.appendChild(statDiv);
+        creaDiv = false;
+      }
+    } else {
+      statDiv.innerHTML = `<strong style="text-decoration: underline; font-size: 15px;">${campo.toUpperCase()}</strong><br><br><p style="font-size: 18px; font-style: italic;">${stats[campo] ?? "-"}</p>`;
+      statsContainer.appendChild(statDiv);
+    }
+  });
+
+  contenedor.appendChild(statsContainer);
+}
+
+// ==== INICIO ====
+window.addEventListener("DOMContentLoaded", cargarDetalle);
+</script>
+</body>
+</html>
