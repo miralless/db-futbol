@@ -2,7 +2,7 @@
   "name": "DB Football 2025/26",
   "short_name": "DB Football",
   "description": "Estadísticas y datos de la temporada 2025/26 de DB Football.",
-  "start_url": "/index.html",
+  "start_url": "/db-futbol/index.html",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
