@@ -10,8 +10,8 @@
   "theme_color": "#00ff88",
   "icons": [
     {
-      "src": "/icono.png",
-      "sizes": "180x180",
+      "src": "/db-futbol/icono-192.png",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     }
