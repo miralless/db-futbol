@@ -299,7 +299,7 @@
         const year = (mesNumeroNext <= "07") ? "2026" : "2025"
         const fechaFormateadaNext = fechaNext[0] + "-" + mesNumeroNext + "-" + year;
         const horaNext = parseInt(fechaHoraNext[1].split(':')[1].trim()) + 6;
-        const minutosNext = fechaHoraNext[1].split(':')[2].trim();
+        const minutosNext = fechaHoraNext[1].split(':')[2];
 
         nextMatchDiv.innerHTML = `<h3>Próximo partido (Jornada ${siguienteJornada})</h3><br><h4>${fechaFormateadaNext} ${horaNext}:${minutosNext}</h4>`;
 
