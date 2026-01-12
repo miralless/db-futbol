@@ -7,13 +7,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="DB Football">
   <link rel="manifest" href="/db-futbol/manifest.json">
-
-  <!-- Icono que se verá en la pantalla de inicio -->
   <link rel="apple-touch-icon" href="icono.png">
   <title>Detalle del Jugador</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
-    /* Estructura general */
+    /* ... (Tus estilos se mantienen iguales) ... */
     .content {
       display: flex;
       flex-direction: column;
@@ -23,12 +21,6 @@
       padding: 20px;
       width: 100%;
     }
-
-    .point {
-      cursor: pointer;
-    }
-
-    /* Contenedores de filas */
     .fila {
       display: flex;
       gap: 20px;
@@ -36,8 +28,6 @@
       justify-content: center;
       flex-wrap: wrap;
     }
-
-    /* Igual que los .item de index */
     .info-box, .stat-item {
       background-color: #1a1a1a;
       color: white;
@@ -46,33 +36,14 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
       font-size: 1rem;
       font-weight: 500;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
       text-align: center;
       flex: 1;
     }
-
-    .info-box {
-      height: 90px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .stat-item {
-      height: fit-content;
-      padding-top: 5%;
-    }
-
-    h2 {
-      margin: 0;
-      font-size: 1.3rem;
-    }
-
-    @media (min-width: 600px) {
-      .stat-item {
-        padding-bottom: 5%;
-      }
-    }
+    .info-box { height: 90px; display: flex; align-items: center; justify-content: center; }
+    .stat-item { height: fit-content; padding-top: 5%; }
+    h2 { margin: 0; font-size: 1.3rem; }
+    .point { cursor: pointer; }
+    @media (min-width: 600px) { .stat-item { padding-bottom: 5%; } }
   </style>
 </head>
 <body>
@@ -98,178 +69,123 @@ import { firebaseConfig } from "./firebaseConfig.js";
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// ==== OBTENER ID DEL JUGADOR DESDE LA URL ====
-const params = new URLSearchParams(window.location.search);
-const personaId = params.get("id");
+// ==== MAPEO DE IDS A NOMBRES REALES ====
+const mapeoJugadores = {
+  "01": "Ekain Etxebarria",
+  "02": "Jon García",
+  "03": "Jon Hermida",
+  "04": "Eneko Ebro",
+  "05": "Peio Manrique",
+  "06": "Gaizka Miralles"
+};
 
-// ==== CARGAR DETALLES ====
+// ==== OBTENER ID NUMÉRICO DESDE LA URL ====
+const params = new URLSearchParams(window.location.search);
+const idNumerico = params.get("id"); // Ejemplo: "01"
+
+// Función para generar el ID del documento (jugador_nombre_apellido)
+const crearIdDoc = (tipo, nombre) => {
+    return `${tipo}_${nombre.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '')}`;
+};
+
 async function cargarDetalle() {
   const contenedor = document.querySelector(".content");
+  const nombreReal = mapeoJugadores[idNumerico];
 
-  if (!personaId) {
-    contenedor.innerHTML = "<p>Error: no se especificó una persona.</p>";
+  if (!idNumerico || !nombreReal) {
+    contenedor.innerHTML = `<p>Error: ID de jugador no reconocido.</p>`;
     return;
   }
 
-  const docRef = doc(db, "Personas", personaId);
-  const docSnap = await getDoc(docRef);
+  const docStatsId = crearIdDoc("jugador", nombreReal);
+  const refStats = doc(db, "seguimiento_futbol", docStatsId);
+  const refPersona = doc(db, "Personas", idNumerico);
+  
+  try {
+    // 1. Cargamos el jugador y sus estadísticas
+    const [snapStats, snapPersona] = await Promise.all([
+      getDoc(refStats),
+      getDoc(refPersona)
+    ]);
 
-  if (docSnap.exists()) {
-    const persona = docSnap.data();
-    const equipoRef = persona.equipo;
-    const equipoSnap = await getDoc(equipoRef);
-    const equipoData = equipoSnap.data();
+    if (snapStats.exists() && snapPersona.exists()) {
+      const dataStats = snapStats.data();
+      const dataPersona = snapPersona.data();
 
-    // === Fila 1: Nombre y Apellido ===
-    const filaNombre = document.createElement("div");
-    filaNombre.classList.add("fila");
+      // === Fila 1: Nombre y Apellido ===
+      const filaNombre = crearFila();
+      filaNombre.appendChild(crearBox(`<h2>${dataPersona.nombre} ${dataPersona.apellido || ""}</h2>`));
+      contenedor.appendChild(filaNombre);
 
-    const nombreDiv = document.createElement("div");
-    nombreDiv.classList.add("info-box");
-    nombreDiv.innerHTML = `<h2>${persona.nombre} ${persona.apellido}</h2>`;
-
-    filaNombre.appendChild(nombreDiv);
-    contenedor.appendChild(filaNombre);
-
-    // === Fila 2: Equipo y Dorsal ===
-    const filaEquipoDorsal = document.createElement("div");
-    filaEquipoDorsal.classList.add("fila");
-
-    const equipoDiv = document.createElement("div");
-    equipoDiv.classList.add("info-box");
-    equipoDiv.classList.add("point");
-    equipoDiv.innerHTML = `<h2>${equipoData.nombre || "-"}</h2>`;
-
-    const dorsalDiv = document.createElement("div");
-    dorsalDiv.classList.add("info-box");
-    dorsalDiv.innerHTML = `<h2>#${persona.dorsal || "-"}</h2>`;
-
-    filaEquipoDorsal.appendChild(equipoDiv);
-    filaEquipoDorsal.appendChild(dorsalDiv);
-    contenedor.appendChild(filaEquipoDorsal);
-
-    // Evento para ir a equipo.html con el nombre del equipo
-    equipoDiv.addEventListener("click", () => {
-      window.location.href = `equipo.html?team=${encodeURIComponent(equipoData.nombre)}`;
-    });
-
-    // === Fila 3: Estadísticas ===
-    if (personaId === "01" || personaId === "04") {
-      mostrarDatosMagic(persona.nombre.toLowerCase(), contenedor);
-    }
-
-    if (personaId === "02") {
-      mostrarDatosMagic2(persona.nombre.toLowerCase(), contenedor);
-    }
-
-    if (personaId === "03" || personaId === "05" || personaId === "06") {
-      personaId === "03" ? mostrarDatosMagic3(persona.nombre.toLowerCase(), contenedor, 2) : personaId === "05" ? mostrarDatosMagic3(persona.nombre.toLowerCase(), contenedor, 0) : mostrarDatosMagic3(persona.nombre.toLowerCase(), contenedor, 1);
-    }
-
-  } else {
-    contenedor.innerHTML = "<p>No se encontró la persona.</p>";
-  }
-}
-
-// ==== MOSTRAR DATOS DEL LOCALSTORAGE ====
-function mostrarDatosMagic(nombreJugador, contenedor) {
-  const datos = JSON.parse(localStorage.getItem("datosMagic"));
-  if (!datos || !datos[nombreJugador]) {
-    console.warn("⚠️ No hay datos en localStorage para:", nombreJugador);
-    return;
-  }
-
-  const stats = datos[nombreJugador];
-  console.log("📊 Datos del jugador:", stats);
-
-  const statsContainer = document.createElement("div");
-  statsContainer.classList.add("fila");
-
-  // Crear los 4 divs (goles, partidos, minutos, tarjetas)
-  const campos = ["goles", "partidos", "minutos", "tarjetas"];
-  campos.forEach(campo => {
-    const statDiv = document.createElement("div");
-    statDiv.classList.add("stat-item");
-    statDiv.innerHTML = `<strong style="text-decoration: underline;">${campo.toUpperCase()}</strong><br><br><p style="font-size: 18px; font-style: italic;">${stats[campo] ?? "-"}</p>`;
-    statsContainer.appendChild(statDiv);
-  });
-
-  contenedor.appendChild(statsContainer);
-}
-
-function mostrarDatosMagic2(nombreJugador, contenedor) {
-  const datos = JSON.parse(localStorage.getItem("datosMagic"));
-  if (!datos || !datos[nombreJugador]) {
-    console.warn("⚠️ No hay datos en localStorage para:", nombreJugador);
-    return;
-  }
-
-  const stats = datos[nombreJugador];
-  console.log("📊 Datos del jugador:", stats);
-
-  const statsContainer = document.createElement("div");
-  statsContainer.classList.add("fila");
-
-  // Crear los 4 divs (goles, partidos, minutos, tarjetas)
-  const campos = ["goles concedidos", "partidos", "minutos", "tarjetas"];
-  campos.forEach(campo => {
-    const statDiv = document.createElement("div");
-    statDiv.classList.add("stat-item");
-    if (campo === "goles concedidos") {
-      statDiv.innerHTML = `<strong style="text-decoration: underline; font-size: 15px;">GOLES RECIB.</strong><br><br><p style="font-size: 18px; font-style: italic;">${stats[campo] ?? "-"}</p>`;
-      statsContainer.appendChild(statDiv);
-    } else {
-      statDiv.innerHTML = `<strong style="text-decoration: underline; font-size: 15px;">${campo.toUpperCase()}</strong><br><br><p style="font-size: 18px; font-style: italic;">${stats[campo] ?? "-"}</p>`;
-      statsContainer.appendChild(statDiv);
-    }
-  });
-
-  contenedor.appendChild(statsContainer);
-}
-
-function mostrarDatosMagic3(nombreJugador, contenedor, numeroArray) {
-  const datos = JSON.parse(localStorage.getItem("datosMagic"));
-  if (!datos || !datos.fvf_stats[0] || !datos.fvf_stats[1] || !datos.fvf_stats[2]) {
-    console.warn("⚠️ No hay datos en localStorage para:", nombreJugador);
-    return;
-  }
-
-  const stats = datos.fvf_stats[numeroArray];
-  console.log("📊 Datos del jugador:", stats);
-
-  const statsContainer = document.createElement("div");
-  statsContainer.classList.add("fila");
-
-  // Crear los 4 divs (goles, partidos, minutos, tarjetas)
-  const campos = ["goles total", "jugados", "titular", "suplente", "tarjeta amarilla", "doble tarjeta amarilla", "tarjeta roja"];
-  var creaDiv = true;
-  var tarjetasRojas = 0;
-  campos.forEach(campo => {
-    const statDiv = document.createElement("div");
-    statDiv.classList.add("stat-item");
-    if (campo === "jugados") {
-      statDiv.innerHTML = `<strong style="text-decoration: underline; font-size: 15px;">PARTIDOS</strong><br><br><p style="font-size: 18px; font-style: italic;">${stats[campo] ?? "-"}</p>`;
-      statsContainer.appendChild(statDiv);
-    } else if (campo === "tarjeta amarilla") {
-      statDiv.innerHTML = `<strong style="text-decoration: underline; font-size: 15px;">AMARILLAS</strong><br><br><p style="font-size: 18px; font-style: italic;">${stats[campo] ?? "-"}</p>`;
-      statsContainer.appendChild(statDiv);
-    } else if (campo === "tarjeta roja" || campo === "doble tarjeta amarilla") {
-      if (creaDiv) {
-        tarjetasRojas = (stats["tarjeta roja"] ?? 0) + (stats["doble tarjeta amarilla"] ?? 0);
-        statDiv.innerHTML = `<strong style="text-decoration: underline; font-size: 15px;">ROJAS</strong><br><br><p style="font-size: 18px; font-style: italic;">${tarjetasRojas ?? "-"}</p>`;
-        statsContainer.appendChild(statDiv);
-        creaDiv = false;
+      // === Fila 2: Equipo (Entrando al documento) y Dorsal ===
+      const filaInfo = crearFila();
+      
+      // Lógica para obtener el NOMBRE del equipo desde la referencia
+      let nombreEquipoFinal = "Sin Equipo";
+      if (dataPersona.equipo) {
+        // Obtenemos el documento al que apunta la referencia
+        const snapEquipo = await getDoc(dataPersona.equipo);
+        if (snapEquipo.exists()) {
+          nombreEquipoFinal = snapEquipo.data().nombre; // Sacamos el campo 'nombre'
+        }
       }
-    } else {
-      statDiv.innerHTML = `<strong style="text-decoration: underline; font-size: 15px;">${campo.toUpperCase()}</strong><br><br><p style="font-size: 18px; font-style: italic;">${stats[campo] ?? "-"}</p>`;
-      statsContainer.appendChild(statDiv);
-    }
-  });
 
-  contenedor.appendChild(statsContainer);
+      const equipoBox = crearBox(`<h2>${nombreEquipoFinal}</h2>`);
+      equipoBox.classList.add("point");
+      equipoBox.onclick = () => window.location.href = `equipo.html?team=${encodeURIComponent(nombreEquipoFinal)}`;
+      
+      const dorsalBox = crearBox(`<h2>#${dataPersona.dorsal || "-"}</h2>`);
+      
+      filaInfo.appendChild(equipoBox);
+      filaInfo.appendChild(dorsalBox);
+      contenedor.appendChild(filaInfo);
+
+      // === Fila 3: Estadísticas Clave ===
+      const filaStats = crearFila();
+      const campos = [
+        { label: "PARTIDOS", valor: dataStats.PJ },
+        { label: "TITULAR", valor: dataStats.Tit },
+        { label: "GOLES", valor: dataStats.Goles },
+        { label: "AMARILLAS", valor: dataStats.Am },
+        { label: "ROJAS", valor: dataStats.Roj }
+      ];
+
+      campos.forEach(c => {
+        const statDiv = document.createElement("div");
+        statDiv.classList.add("stat-item");
+        statDiv.innerHTML = `
+          <strong style="text-decoration: underline; font-size: 15px;">${c.label}</strong>
+          <br><br>
+          <p style="font-size: 18px; font-style: italic;">${c.valor ?? "0"}</p>
+        `;
+        filaStats.appendChild(statDiv);
+      });
+      
+      contenedor.appendChild(filaStats);
+
+    } else {
+      contenedor.innerHTML = `<p>Error: No se encontró el jugador en las colecciones.</p>`;
+    }
+  } catch (error) {
+    console.error("Error al cargar Firebase:", error);
+    contenedor.innerHTML = "<p>Error al conectar con la base de datos.</p>";
+  }
 }
 
-// ==== INICIO ====
+// Funciones auxiliares
+function crearFila() {
+  const div = document.createElement("div");
+  div.classList.add("fila");
+  return div;
+}
+
+function crearBox(contenido) {
+  const div = document.createElement("div");
+  div.classList.add("info-box");
+  div.innerHTML = contenido;
+  return div;
+}
+
 window.addEventListener("DOMContentLoaded", cargarDetalle);
 </script>
 </body>

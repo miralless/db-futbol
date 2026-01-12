@@ -7,75 +7,18 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="DB Football">
   <link rel="manifest" href="/db-futbol/manifest.json">
-
-  <!-- Icono que se verá en la pantalla de inicio -->
   <link rel="apple-touch-icon" href="icono.png">
   <title>Equipo</title>
   <link rel="stylesheet" href="styles.css">
   <style>
-    .team-container {
-      width: 100%;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      margin-top: 30px;
-      padding: 0 20px;
-      flex: 1;
-      justify-content: center;
-    }
-    .team-name {
-      font-size: 1.8rem;
-      text-align: center;
-      color: white;
-      background-color: #222;
-      padding: 25px;
-      border-radius: 10px;
-      font-weight: bold;
-    }
-    .info {
-      font-size: 1rem;
-      background-color: #222;
-      color: white;
-      padding: 15px;
-      border-radius: 10px;
-    }
-    .titleInfo {
-      font-size: 1rem;
-      background-color: #222;
-      color: white;
-      padding: 15px;
-      border-radius: 10px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-        align-items: center;
-    }
-    .footer { background-color: #111; color: #aaa; text-align: center; padding: 1.5rem; margin-top: 20px; }
-    .detailsDiv {
-        display: flex;
-        justify-content: space-around;
-        gap: 10px;
-    }
-    .partido {
-      display: flex;
-      width: 100%;
-      font-weight: bold;
-      font-size: 1rem;
-      background-color: #222;
-      color: white;
-      padding: 15px;
-      border-radius: 10px;
-      align-items: center;
-      justify-content: center;
-    }
-    .verde {
-      color: #00ff88;
-    }
-    .nombreEquipo {
-      font-size: 15px;
-      text-align: center;
-    }
+    /* ... (Mantenemos tus estilos CSS intactos) ... */
+    .team-container { width: 100%; margin: 30px auto; display: flex; flex-direction: column; gap: 20px; padding: 0 20px; flex: 1; justify-content: center; }
+    .team-name { font-size: 1.8rem; text-align: center; color: white; background-color: #222; padding: 25px; border-radius: 10px; font-weight: bold; }
+    .titleInfo { font-size: 1rem; background-color: #222; color: white; padding: 15px; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+    .detailsDiv { display: flex; justify-content: space-around; gap: 10px; }
+    .partido { display: flex; width: 100%; font-weight: bold; font-size: 1rem; background-color: #222; color: white; padding: 15px; border-radius: 10px; align-items: center; justify-content: center; }
+    .verde { color: #00ff88; }
+    .nombreEquipo { font-size: 15px; text-align: center; }
   </style>
 </head>
 <body>
@@ -93,292 +36,260 @@
     <p>© 2025 DB Football. Todos los derechos reservados.</p>
   </footer>
 
-  <script>
-    const params = new URLSearchParams(window.location.search);
-    const teamName = params.get("team");
+  <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+  import { firebaseConfig } from "./firebaseConfig.js";
 
-    const teamContainer = document.getElementById("teamInfo");
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-    function cargarEquipo() {
-      const dataString = localStorage.getItem("magicEquipos");
-      if (!dataString) {
-        teamContainer.innerHTML = "<p>No hay datos en localStorage.</p>";
-        return;
-      }
+  const params = new URLSearchParams(window.location.search);
+  const teamName = params.get("team");
+  const teamContainer = document.getElementById("teamInfo");
 
-      let data;
-      try {
-        data = JSON.parse(dataString);
-      } catch (err) {
-        console.error("Error parseando magicEquipos:", err);
-        teamContainer.innerHTML = "<p>Error al leer datos del equipo.</p>";
-        return;
-      }
+  // 1. Mapeo para los IDs de los documentos de seguimiento (Scraping)
+  const mapeoIdsSeguimiento = {
+    "equipo_sd_eibar_b": "equipo_eibar_b",
+    "equipo_indartsu_club": "equipo_indartsu",
+    "equipo_cd_derio": "equipo_derio",
+    "equipo_fc_cartagena": "equipo_cartagena"
+  };
 
-      // Encontrar el equipo correcto dentro del array
-      const match = (teamName === "SD Eibar B") ? data.matches[0] : 
-                    (teamName === "CD Derio") ? data.matches[1] : 
-                    (teamName === "Bilbao Athletic") ? data.matches[2] :
-                    (teamName === "Indartsu Club") ? data.matches[3] : null;
+  // 2. Mapeo para los IDs de la colección "Equipos" (Base de datos principal)
+  const mapeoIdsEquiposBase = {
+    "SD Eibar B": "EQ01",
+    "CD Derio": "EQ02",
+    "Indartsu Club": "EQ03",
+    "FC Cartagena": "EQ04"
+    // Añade aquí el resto según los tengas en Firebase
+  };
 
-      if (!match) {
-        teamContainer.innerHTML = `<p>No se encontró información para el equipo: ${teamName}</p>`;
-        return;
-      }
+  const crearIdDocSeguimiento = (tipo, nombre) => {
+      const idOriginal = `${tipo}_${nombre.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '')}`;
+      return mapeoIdsSeguimiento[idOriginal] || idOriginal;
+  };
 
-      const detailsDiv = document.createElement("div");
-      detailsDiv.className = "detailsDiv";
-
-      const detailsDivNext = document.createElement("div");
-      detailsDivNext.className = "detailsDiv";
-
-      const nameDiv = document.createElement("div");
-      const lastMatchDiv = document.createElement("div");
-      const nextMatchDiv = document.createElement("div");
-
-      nameDiv.className = "team-name";
-      lastMatchDiv.className = "titleInfo";
-      nextMatchDiv.className = "titleInfo";
-
-      if (teamName === "Indartsu Club") {
-        var lastMatch = data.matches[3].last_match;
-        var nextMatch = data.matches[3].next_match;
-
-        const parts = lastMatch.split(',');
-        const partsNext = nextMatch.split(',');
-
-        const jornadaYEquipos = parts[0]?.trim(); // "Jornada 5: INDARTSU vs ACERO"
-        const fechaHora = parts[1]?.trim(); // "18-10-2025 15:00"
-        const resultadoTexto = parts[2]?.trim(); // "resultado: 3-1 (G)"
-
-        const jornadaYEquiposNext = partsNext[0]?.trim(); // "Jornada 6: ..."
-        const fechaHoraNext = partsNext[1]?.trim(); // "25-10-2025 12:00"
-
-        // Jornada (antes de los ":")
-        const jornada = jornadaYEquipos.split(':')[0];
-        const jornadaNext = jornadaYEquiposNext.split(':')[0];
-
-        // Equipos
-        const equiposStr = jornadaYEquipos.split(':')[1]?.trim();
-        const [localTeam, awayTeam] = equiposStr.split(' vs ');
-
-        const equiposStrNext = jornadaYEquiposNext.split(':')[1]?.trim();
-        const [localTeamNext, awayTeamNext] = equiposStrNext.split(' vs ');
-
-        // Resultado numérico
-        const resultado = resultadoTexto ? resultadoTexto.replace('resultado:', '').trim().split(' ')[0] : '—';
-
-        const resultadoSplit = resultado.split('-');
-        const resultadoMostrado = resultadoSplit[0] + " - "  + resultadoSplit[1];
-
-        // Añadir elementos
-        detailsDiv.innerHTML = `
-            <div class="nombreEquipo partido ${(localTeam === "INDARTSU") ? 'verde' : ''}">${localTeam}</div>
-            <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content; white-space: nowrap;">${resultadoMostrado}</div>
-            <div class="nombreEquipo partido ${(awayTeam === "INDARTSU") ? 'verde' : ''}">${awayTeam}</div>
-        `;
-
-        detailsDivNext.innerHTML = `
-            <div class="nombreEquipo partido ${(localTeamNext === "INDARTSU") ? 'verde' : ''}">${localTeamNext}</div>
-            <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content;">-</div>
-            <div class="nombreEquipo partido ${(awayTeamNext === "INDARTSU") ? 'verde' : ''}">${awayTeamNext}</div>
-        `;
-
-        const fecha = fechaHora.split(' ')[0];
-
-        nameDiv.textContent = teamName;
-        lastMatchDiv.innerHTML = `<h3>Último partido (${jornada})</h3><br><h4>${fecha}</h4>`;
-        nextMatchDiv.innerHTML = `<h3>Próximo partido (${jornadaNext})</h3><br><h4>${fechaHoraNext}</h4>`;
-      } else if (teamName === "SD Eibar B") {
-        var lastMatch = data.matches[0].last_match;
-        var nextMatch = data.matches[0].next_match;
-
-        nameDiv.textContent = teamName;
-
-        const parts = lastMatch.split(':');
-        const catYJornada = parts[0]?.split('.');
-        const grJornada = catYJornada[1]?.split(' ');
-        const jornada = grJornada[3] + " " + grJornada[4];
-
-        const [partido, fechaRaw] = parts[1].split('(');
-        const fecha = fechaRaw.replace(')', '').trim();
-        const partidoSinFecha = partido.trim();
-
-        // console.log(partidoSinFecha, fecha);
-
-        const meses = {
-          "ENE": "01", "FEB": "02", "MAR": "03", "ABR": "04",
-          "MAY": "05", "JUN": "06", "JUL": "07", "AGO": "08",
-          "SEP": "09", "OCT": "10", "NOV": "11", "DIC": "12"
-        };
-
-        const [dia, mesTexto, año] = fecha.split(" ");
-        const mesNumero = meses[mesTexto.toUpperCase()];
-
-        const fechaFormateada = `${dia}-${mesNumero}-${año}`;
-        // console.log(fechaFormateada);
-
-        const regex = /(.*)\s(\d+-\d+)\s(.*)/;
-
-        const [, local, resultado, visitante] = partido.trim().match(regex);
-        
-        lastMatchDiv.innerHTML = `<h3>Último partido (${jornada})</h3><br><h4>${fechaFormateada}</h4>`;
-
-        detailsDiv.innerHTML = `
-            <div class="nombreEquipo partido ${(local === "Eibar B") ? 'verde' : ''}">${local.toUpperCase()}</div>
-            <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content; white-space: nowrap;">${resultado}</div>
-            <div class="nombreEquipo partido ${(visitante === "Eibar B") ? 'verde' : ''}">${visitante.toUpperCase()}</div>
-        `;
-
-        const siguienteJornada = parseInt(grJornada[4]) + 1;
-        const grYJornadaNext = nextMatch.split('Grupo 2:');
-        const seccionesNext = grYJornadaNext[1].split(',');
-        const fechaNext = seccionesNext[2].trim().split(' ');
-        const mesNumeroNext = meses[fechaNext[1].toUpperCase()];
-        const year = (mesNumeroNext <= "07") ? "2026" : "2025"
-        const fechaFormateadaNext = fechaNext[0] + "-" + mesNumeroNext + "-" + year;
-        const horaNext = parseInt(seccionesNext[1].split(':')[0].trim()) + 6;
-        const minutosNext = seccionesNext[1].split(':')[1].trim();
-
-        nextMatchDiv.innerHTML = `<h3>Próximo partido (Jornada ${siguienteJornada})</h3><br><h4>${fechaFormateadaNext} ${horaNext}:${minutosNext}</h4>`;
-
-        const [localNext, visitanteNext] = seccionesNext[0].trim().split(' vs ');
-
-        detailsDivNext.innerHTML = `
-            <div class="nombreEquipo partido ${(localNext === "Eibar B") ? 'verde' : ''}">${localNext.toUpperCase()}</div>
-            <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content; white-space: nowrap;">-</div>
-            <div class="nombreEquipo partido ${(visitanteNext === "Eibar B") ? 'verde' : ''}">${visitanteNext.toUpperCase()}</div>
-        `;
-      } else if (teamName === "CD Derio") {
-        var lastMatch = data.matches[1].last_match;
-        var nextMatch = data.matches[1].next_match;
-
-        nameDiv.textContent = teamName;
-
-        const parts = lastMatch.split(':');
-        const catYJornada = parts[0]?.split('.');
-        const grJornada = catYJornada[1]?.split(' ');
-        const jornada = grJornada[3] + " " + grJornada[4];
-
-        const [partido, fechaRaw] = parts[1].split('(');
-        const fecha = fechaRaw.replace(')', '').trim();
-        const partidoSinFecha = partido.trim();
-
-        // console.log(partidoSinFecha, fecha);
-
-        const meses = {
-          "ENE": "01", "FEB": "02", "MAR": "03", "ABR": "04",
-          "MAY": "05", "JUN": "06", "JUL": "07", "AGO": "08",
-          "SEP": "09", "OCT": "10", "NOV": "11", "DIC": "12"
-        };
-
-        const [dia, mesTexto, año] = fecha.split(" ");
-        const mesNumero = meses[mesTexto.toUpperCase()];
-
-        const fechaFormateada = `${dia}-${mesNumero}-${año}`;
-        // console.log(fechaFormateada);
-
-        const regex = /(.*)\s(\d+-\d+)\s(.*)/;
-
-        const [, local, resultado, visitante] = partido.trim().match(regex);
-        
-        lastMatchDiv.innerHTML = `<h3>Último partido (${jornada})</h3><br><h4>${fechaFormateada}</h4>`;
-
-        detailsDiv.innerHTML = `
-            <div class="nombreEquipo partido ${(local === "CD Derio") ? 'verde' : ''}">${local.toUpperCase()}</div>
-            <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content; white-space: nowrap;">${resultado}</div>
-            <div class="nombreEquipo partido ${(visitante === "CD Derio") ? 'verde' : ''}">${visitante.toUpperCase()}</div>
-        `;
-
-        const siguienteJornada = parseInt(grJornada[4]) + 1;
-        const grYJornadaNext = nextMatch.split('Vasco:');
-        const partidoYFechaNext = grYJornadaNext[1].split(',');
-        const fechaHoraNext = partidoYFechaNext[1].trim().split(' at ');
-        const fechaNext = fechaHoraNext[0].trim().split(' ');
-        const mesNumeroNext = meses[fechaNext[1].toUpperCase()];
-        const year = (mesNumeroNext <= "07") ? "2026" : "2025"
-        const fechaFormateadaNext = fechaNext[0] + "-" + mesNumeroNext + "-" + year;
-        const horaNext = parseInt(fechaHoraNext[1].split(':')[0].trim()) + 6;
-        const minutosNext = fechaHoraNext[1].split(':')[1].trim();
-
-        nextMatchDiv.innerHTML = `<h3>Próximo partido (Jornada ${siguienteJornada})</h3><br><h4>${fechaFormateadaNext} ${horaNext}:${minutosNext}</h4>`;
-
-        const [localNext, visitanteNext] = partidoYFechaNext[0].trim().split(' vs ');
-        
-        detailsDivNext.innerHTML = `
-            <div class="nombreEquipo partido ${(localNext === "CD Derio") ? 'verde' : ''}">${localNext.toUpperCase()}</div>
-            <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content; white-space: nowrap;">-</div>
-            <div class="nombreEquipo partido ${(visitanteNext === "CD Derio") ? 'verde' : ''}">${visitanteNext.toUpperCase()}</div>
-        `;
-      } else if (teamName === "Bilbao Athletic") {
-        var lastMatch = data.matches[2].last_match;
-        var nextMatch = data.matches[2].next_match;
-
-        nameDiv.textContent = teamName;
-
-        const parts = lastMatch.split(':');
-        const catYJornada = parts[0]?.split('.');
-        const grJornada = catYJornada[1]?.split(' ');
-        const jornada = grJornada[3] + " " + grJornada[4];
-
-        const [partido, fechaRaw] = parts[1].split('(');
-        const fecha = fechaRaw.replace(')', '').trim();
-        const partidoSinFecha = partido.trim();
-
-        // console.log(partidoSinFecha, fecha);
-
-        const meses = {
-          "ENE": "01", "FEB": "02", "MAR": "03", "ABR": "04",
-          "MAY": "05", "JUN": "06", "JUL": "07", "AGO": "08",
-          "SEP": "09", "OCT": "10", "NOV": "11", "DIC": "12"
-        };
-
-        const [dia, mesTexto, año] = fecha.split(" ");
-        const mesNumero = meses[mesTexto.toUpperCase()];
-
-        const fechaFormateada = `${dia}-${mesNumero}-${año}`;
-        // console.log(fechaFormateada);
-
-        const regex = /(.*)\s(\d+-\d+)\s(.*)/;
-
-        const [, local, resultado, visitante] = partido.trim().match(regex);
-        
-        lastMatchDiv.innerHTML = `<h3>Último partido (${jornada})</h3><br><h4>${fechaFormateada}</h4>`;
-
-        detailsDiv.innerHTML = `
-            <div class="nombreEquipo partido ${(local === "Bilbao Ath.") ? 'verde' : ''}">${local.toUpperCase()}</div>
-            <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content; white-space: nowrap;">${resultado}</div>
-            <div class="nombreEquipo partido ${(visitante === "Bilbao Ath.") ? 'verde' : ''}">${visitante.toUpperCase()}</div>
-        `;
-
-        const siguienteJornada = parseInt(grJornada[4]) + 1;
-        const grYJornadaNext = nextMatch.split('Grupo 1:');
-        const partidoYFechaNext = grYJornadaNext[1].split(' (');
-        const fechaYHoraNext = partidoYFechaNext[1].replace(')', '').trim();
-        const mesNumeroNext = meses[fechaYHoraNext.split(' ')[1].replace(',', '').trim().toUpperCase()];
-        const year = (mesNumeroNext <= "07") ? "2026" : "2025"
-        const fechaFormateadaNext = fechaYHoraNext.split(' ')[0] + "-" + mesNumeroNext + "-" + year;
-        const horaNext = parseInt(fechaYHoraNext.split(' ')[2].split(':')[0].trim()) + 6;
-        const minutosNext = fechaYHoraNext.split(' ')[2].split(':')[1].trim();
-
-        nextMatchDiv.innerHTML = `<h3>Próximo partido (Jornada ${siguienteJornada})</h3><br><h4>${fechaFormateadaNext} ${horaNext}:${minutosNext}</h4>`;
-
-        const [localNext, visitanteNext] = partidoYFechaNext[0].trim().split(' vs ');
-
-        detailsDivNext.innerHTML = `
-            <div class="nombreEquipo partido ${(localNext === "Bilbao Ath.") ? 'verde' : ''}">${localNext.toUpperCase()}</div>
-            <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content; white-space: nowrap;">-</div>
-            <div class="nombreEquipo partido ${(visitanteNext === "Bilbao Ath.") ? 'verde' : ''}">${visitanteNext.toUpperCase()}</div>
-        `;
-      }
-      teamContainer.appendChild(nameDiv);
-      teamContainer.appendChild(lastMatchDiv);
-      teamContainer.appendChild(detailsDiv);
-      teamContainer.appendChild(nextMatchDiv);
-      teamContainer.appendChild(detailsDivNext);
+  async function cargarEquipo() {
+    if (!teamName) {
+      teamContainer.innerHTML = "<p>No se especificó equipo.</p>";
+      return;
     }
 
-    cargarEquipo();
-  </script>
+    // ID para seguimiento_futbol (ej: equipo_derio)
+    const docStatsId = crearIdDocSeguimiento("equipo", teamName);
+    const refStats = doc(db, "seguimiento_futbol", docStatsId);
+    
+    // ID para la colección Equipos (ej: EQ02)
+    const idEquipoBase = mapeoIdsEquiposBase[teamName] || teamName;
+    const refEquipoBase = doc(db, "Equipos", idEquipoBase);
+
+    try {
+      // Cargamos ambos documentos en paralelo
+      const [snapStats, snapEquipoBase] = await Promise.all([
+        getDoc(refStats),
+        getDoc(refEquipoBase)
+      ]);
+
+      if (snapStats.exists()) {
+        const dataStats = snapStats.data();
+        
+        // --- OBTENER NOMBRE REAL DE LA COLECCIÓN EQUIPOS ---
+        let nombreOficial = teamName; 
+        if (snapEquipoBase.exists()) {
+          nombreOficial = snapEquipoBase.data().nombre; // Campo 'nombre' de la col Equipos
+        }
+
+        teamContainer.innerHTML = "";
+
+        // --- 1. Título del Equipo ---
+        const nameDiv = document.createElement("div");
+        nameDiv.className = "team-name";
+        nameDiv.textContent = nombreOficial;
+        teamContainer.appendChild(nameDiv);
+
+        const { ultimo, proximo } = dataStats;
+
+        if (teamName != "Indartsu Club") {
+          // --- 2. Bloque Último Partido ---
+          if (ultimo) {
+            const lastTitle = document.createElement("div");
+            lastTitle.className = "titleInfo";
+
+            var jornadaLimpia = ultimo.infoJornada
+              .replace(/schedule/gi, '')
+              .replace(/get_app/gi, '')
+              .trim();
+
+            jornadaLimpia = jornadaLimpia.replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/, (match, d, m, y) => {
+                const dia = d.padStart(2, '0');
+                const mes = m.padStart(2, '0');
+                return `${dia}/${mes}/${y}`;
+            });
+
+            const jornada = jornadaLimpia.split(' - ')[0].split(' - ')[0];
+            const fecha = jornadaLimpia.split(' - ')[1].split(' - ')[0];
+
+            lastTitle.innerHTML = `<h3>${jornada} (${fecha})</h3>`;
+            teamContainer.appendChild(lastTitle);
+
+            const lastDetails = document.createElement("div");
+            lastDetails.className = "detailsDiv";
+            
+            const esCasa = ultimo.rival.includes("(C)");
+            const rivalLimpio = ultimo.rival.replace("(C)", "").replace("(F)", "").trim();
+
+            lastDetails.innerHTML = `
+                <div class="nombreEquipo partido ${esCasa ? 'verde' : ''}">${esCasa ? nombreOficial : rivalLimpio}</div>
+                <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content; white-space: nowrap;">${ultimo.resultado}</div>
+                <div class="nombreEquipo partido ${!esCasa ? 'verde' : ''}">${!esCasa ? nombreOficial : rivalLimpio}</div>
+            `;
+            teamContainer.appendChild(lastDetails);
+          }
+
+          // --- 3. Bloque Próximo Partido ---
+          if (proximo) {
+            const nextTitle = document.createElement("div");
+            nextTitle.className = "titleInfo";
+
+            var jornadaLimpia = proximo.infoJornada
+              .replace(/schedule/gi, '')
+              .replace(/get_app/gi, '')
+              .trim();
+
+            jornadaLimpia = jornadaLimpia.replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/, (match, d, m, y) => {
+                const dia = d.padStart(2, '0');
+                const mes = m.padStart(2, '0');
+                return `${dia}/${mes}/${y}`;
+            });
+
+            const jornada = jornadaLimpia.split(' - ')[0].split(' - ')[0];
+            const fecha = jornadaLimpia.split(' - ')[1].split(' - ')[0];
+
+            nextTitle.innerHTML = `<h3>${jornada} (${fecha})</h3>`;
+            teamContainer.appendChild(nextTitle);
+
+            const nextDetails = document.createElement("div");
+            nextDetails.className = "detailsDiv";
+
+            const esCasaProx = proximo.rival.includes("(C)");
+            const rivalProxLimpio = proximo.rival.replace("(C)", "").replace("(F)", "").trim();
+
+            nextDetails.innerHTML = `
+                <div class="nombreEquipo partido ${esCasaProx ? 'verde' : ''}">${esCasaProx ? nombreOficial : rivalProxLimpio}</div>
+                <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content;">${proximo.resultado}</div>
+                <div class="nombreEquipo partido ${!esCasaProx ? 'verde' : ''}">${!esCasaProx ? nombreOficial : rivalProxLimpio}</div>
+            `;
+            teamContainer.appendChild(nextDetails);
+          }
+        } else {
+          // --- 2. Bloque Último Partido ---
+        if (ultimo) {
+          const lastTitle = document.createElement("div");
+          lastTitle.className = "titleInfo";
+
+          var jornadaLimpia = ultimo.infoJornada
+            .replace(/schedule/gi, '')
+            .replace(/get_app/gi, '')
+            .trim();
+
+          jornadaLimpia = jornadaLimpia.replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/, (match, d, m, y) => {
+              const dia = d.padStart(2, '0');
+              const mes = m.padStart(2, '0');
+              return `${dia}/${mes}/${y}`;
+          });
+
+          const jornada = jornadaLimpia.split(' - ')[0].split(' - ')[0];
+          const fecha = jornadaLimpia.split(' - ')[1];
+
+          lastTitle.innerHTML = `<h3>${jornada} (${fecha})</h3>`;
+          teamContainer.appendChild(lastTitle);
+
+          const lastDetails = document.createElement("div");
+          lastDetails.className = "detailsDiv";
+          
+          const esCasa = ultimo.rival.includes("(C)");
+          const rivalLimpio = ultimo.rival.replace("(C)", "").replace("(F)", "").trim();
+
+          ultimo.resultado = ultimo.resultado.replace("P", "");
+          ultimo.resultado = ultimo.resultado.replace("G", "");
+
+          const rival = rivalLimpio.replace('"', "").replace('"', '').trim();
+
+          lastDetails.innerHTML = `
+              <div class="nombreEquipo partido ${esCasa ? 'verde' : ''}">${esCasa ? formatearNombreEquipo(nombreOficial) : formatearNombreEquipo(rival)}</div>
+              <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content; white-space: nowrap;">${ultimo.resultado}</div>
+              <div class="nombreEquipo partido ${!esCasa ? 'verde' : ''}">${!esCasa ? formatearNombreEquipo(nombreOficial) : formatearNombreEquipo(rival)}</div>
+          `;
+          teamContainer.appendChild(lastDetails);
+        }
+
+        // --- 3. Bloque Próximo Partido ---
+        if (proximo) {
+          const nextTitle = document.createElement("div");
+          nextTitle.className = "titleInfo";
+
+          var jornadaLimpia = proximo.infoJornada
+            .replace(/schedule/gi, '')
+            .replace(/get_app/gi, '')
+            .trim();
+
+          jornadaLimpia = jornadaLimpia.replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/, (match, d, m, y) => {
+              const dia = d.padStart(2, '0');
+              const mes = m.padStart(2, '0');
+              return `${dia}/${mes}/${y}`;
+          });
+
+          const jornada = jornadaLimpia.split(' - ')[0].split(' - ')[0];
+          const fecha = jornadaLimpia.split(' - ')[1].split(' - ')[0];
+
+          nextTitle.innerHTML = `<h3>${jornada} (${fecha})</h3>`;
+          teamContainer.appendChild(nextTitle);
+
+          const nextDetails = document.createElement("div");
+          nextDetails.className = "detailsDiv";
+
+          const esCasaProx = proximo.rival.includes("(C)");
+          const rivalProxLimpio = proximo.rival.replace("(C)", "").replace("(F)", "").trim();
+
+          const matchHora = proximo.resultado.match(/\d{2}:\d{2}/);
+          const horaLimpia = matchHora ? matchHora[0] : "-";
+
+          const rivalProx = rivalProxLimpio.replace('"', "").replace('"', '').trim();
+
+          nextDetails.innerHTML = `
+              <div class="nombreEquipo partido ${esCasaProx ? 'verde' : ''}">${esCasaProx ? formatearNombreEquipo(nombreOficial) : formatearNombreEquipo(rivalProx)}</div>
+              <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content;">${horaLimpia}</div>
+              <div class="nombreEquipo partido ${!esCasaProx ? 'verde' : ''}">${!esCasaProx ? formatearNombreEquipo(nombreOficial) : formatearNombreEquipo(rivalProx)}</div>
+          `;
+          teamContainer.appendChild(nextDetails);
+        }
+        }
+
+      } else {
+        teamContainer.innerHTML = `<p>No se encontraron estadísticas para este equipo.</p>`;
+      }
+    } catch (error) {
+      console.error("Error Firebase:", error);
+      teamContainer.innerHTML = "<p>Error al conectar con la base de datos.</p>";
+    }
+  }
+
+  function formatearNombreEquipo(texto) {
+    if (!texto) return "";
+
+    return texto.toLowerCase().split(' ').map(palabra => {
+        // Si la palabra contiene comillas, la devolvemos en mayúsculas
+        if (palabra.includes('"')) {
+            return palabra.toUpperCase();
+        }
+        // Si es una palabra normal, ponemos en mayúscula solo la primera letra
+        return palabra.charAt(0).toUpperCase() + palabra.slice(1);
+    }).join(' ');
+}
+
+  cargarEquipo();
+</script>
+  
 </body>
 </html>
