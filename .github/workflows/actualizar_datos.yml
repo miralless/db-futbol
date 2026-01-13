@@ -18,13 +18,13 @@ jobs:
           node-version: '20'
 
       - name: Instalar dependencias
-        run: |  
-          npm install
-        working-directory: ./functions  
+        run: |
+          # Entramos directamente a la carpeta functions donde está el package.json
+          cd functions && npm install
 
       - name: Ejecutar Scrapeo
         run: |
+          # Ejecutamos el script desde la carpeta functions
           node functions/index.js
         env:
-          # Usamos el secreto que configuraste en GitHub
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
