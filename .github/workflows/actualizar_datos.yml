@@ -19,6 +19,7 @@ jobs:
 
       - name: Instalar dependencias
         run: |
+          cd functions  
           npm install
 
       - name: Ejecutar Scrapeo
