@@ -27,7 +27,7 @@ async function scriptIntegradoFutbol() {
     const baseDeDatosFutbol = [];
     const browser = await puppeteer.launch({ 
         headless: "new",
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] 
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-blink-features=AutomationControlled'] 
     });
 
     try {
@@ -58,6 +58,10 @@ async function scriptIntegradoFutbol() {
             });
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
             // await page.waitForSelector('.lpfTable01', { visible: true, timeout: 300000 });
+            await page.evaluateOnNewDocument(() => {
+                Object.defineProperty(navigator, 'webdriver', { get: () => false });
+            });
+            /*
             const contenido = await page.content();
             console.log("--- DEBUG START ---");
             console.log("Longitud del HTML:", contenido.length);
@@ -65,6 +69,7 @@ async function scriptIntegradoFutbol() {
             const textoVisible = await page.evaluate(() => document.body.innerText.substring(0, 500));
             console.log("Texto visible:", textoVisible);
             console.log("--- DEBUG END ---");
+            */
             try {
                 await page.goto(j.url, { waitUntil: 'domcontentloaded', timeout: 40000 });
                 const stats = await page.evaluate((n) => {
@@ -122,6 +127,9 @@ async function scriptIntegradoFutbol() {
             });
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
             // await page.waitForSelector('.lpfTable01', { visible: true, timeout: 300000 });
+            await page.evaluateOnNewDocument(() => {
+                Object.defineProperty(navigator, 'webdriver', { get: () => false });
+            });
             try {
                 await page.goto(e.url, { waitUntil: 'networkidle2', timeout: 40000 });
                 const data = await page.evaluate((nFiltro) => {
