@@ -5,7 +5,7 @@ const admin = require('firebase-admin');
 // 1. CONFIGURACIÓN DE FIREBASE
 const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
     ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT) 
-    : require("../serviceAccountKey.json");
+    : require("./serviceAccountKey.json");
 
 if (!admin.apps.length) {
     admin.initializeApp({
