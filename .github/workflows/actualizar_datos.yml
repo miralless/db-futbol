@@ -19,7 +19,6 @@ jobs:
 
       - name: Instalar dependencias
         run: |
-          cd db-futbol
           npm install
 
       - name: Ejecutar Scrapeo
