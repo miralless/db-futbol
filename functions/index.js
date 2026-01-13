@@ -52,6 +52,10 @@ async function scriptIntegradoFutbol() {
         // --- EXTRACCIÓN JUGADORES ---
         for (const j of jugadoresLaPreferente) {
             const page = await browser.newPage();
+            await page.setViewport({ width: 1920, height: 1080 });
+            await page.setExtraHTTPHeaders({
+                'Accept-Language': 'es-ES,es;q=0.9'
+            });
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
             // await page.waitForSelector('.lpfTable01', { visible: true, timeout: 300000 });
             try {
@@ -105,6 +109,10 @@ async function scriptIntegradoFutbol() {
         // --- EXTRACCIÓN EQUIPOS LA PREFERENTE ---
         for (const e of equiposLaPreferente) {
             const page = await browser.newPage();
+            await page.setViewport({ width: 1920, height: 1080 });
+            await page.setExtraHTTPHeaders({
+                'Accept-Language': 'es-ES,es;q=0.9'
+            });
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
             // await page.waitForSelector('.lpfTable01', { visible: true, timeout: 300000 });
             try {
