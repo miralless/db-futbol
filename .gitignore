@@ -6,6 +6,7 @@ firebaseConfig.js
 
 serviceAccountKey.json
 
+
 # Logs
 *.log
 
