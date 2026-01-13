@@ -18,9 +18,9 @@ jobs:
           node-version: '20'
 
       - name: Instalar dependencias
-        run: |
-          cd functions  
+        run: |  
           npm install
+        working-directory: ./functions  
 
       - name: Ejecutar Scrapeo
         run: |
