@@ -58,6 +58,13 @@ async function scriptIntegradoFutbol() {
             });
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
             // await page.waitForSelector('.lpfTable01', { visible: true, timeout: 300000 });
+            const contenido = await page.content();
+            console.log("--- DEBUG START ---");
+            console.log("Longitud del HTML:", contenido.length);
+            // Esto imprimirá el texto visible para ver si hay un "Acceso denegado"
+            const textoVisible = await page.evaluate(() => document.body.innerText.substring(0, 500));
+            console.log("Texto visible:", textoVisible);
+            console.log("--- DEBUG END ---");
             try {
                 await page.goto(j.url, { waitUntil: 'domcontentloaded', timeout: 40000 });
                 const stats = await page.evaluate((n) => {
@@ -217,7 +224,7 @@ async function scriptIntegradoFutbol() {
             });
             
             baseDeDatosFutbol.push({ tipo: "equipo", nombre: "Indartsu", origen: "Federacion", ...dataInd, timestamp: new Date().toISOString() });
-            console.log("✅ Datos Indartsu extraídos (Jornada con fecha y Próximo con hora)");
+            console.log("✅ Datos extraídos (Jornada con fecha y Próximo con hora)");
 
         } catch (e) { 
             console.error("❌ Error Indartsu:", e); 
