@@ -23,7 +23,6 @@ jobs:
 
       - name: Ejecutar Scrapeo
         run: |
-          cd db-futbol
           node functions/index.js
         env:
           # Usamos el secreto que configuraste en GitHub
