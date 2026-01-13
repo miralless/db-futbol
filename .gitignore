@@ -4,6 +4,8 @@ node_modules/
 # Archivos de configuración de Firebase
 firebaseConfig.js
 
+serviceAccountKey.json
+
 # Logs
 *.log
 
