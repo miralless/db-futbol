@@ -1,0 +1,31 @@
+name: Actualizacion Automatica Futbol
+on:
+  schedule:
+    # Se ejecuta cada hora (minuto 0)
+    - cron: '0 * * * *'
+  workflow_dispatch: # ESTO permite que lo ejecutes "cuando tú quieras" manualmente
+
+jobs:
+  scrapeo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependencias
+        run: |
+          cd db-futbol
+          npm install
+
+      - name: Ejecutar Scrapeo
+        run: |
+          cd db-futbol
+          node functions/index.js
+        env:
+          # Usamos el secreto que configuraste en GitHub
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

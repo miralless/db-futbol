@@ -3,7 +3,9 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const admin = require('firebase-admin');
 
 // 1. CONFIGURACIÓN DE FIREBASE
-const serviceAccount = require("./serviceAccountKey.json");
+const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
+    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT) 
+    : require("../serviceAccountKey.json");
 
 if (!admin.apps.length) {
     admin.initializeApp({
