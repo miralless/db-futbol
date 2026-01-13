@@ -1,0 +1,12 @@
+{
+  "name": "functions-scraping",
+  "version": "1.0.0",
+  "description": "Script de scraping para resultados de futbol",
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^11.0.0",
+    "puppeteer": "^21.0.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  }
+}
