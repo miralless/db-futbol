@@ -17,6 +17,11 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Instalar dependencias del sistema para Puppeteer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgbm-dev libnss3 libatk-bridge2.0-0 libgtk-3-0 libasound2    
+
       - name: Instalar dependencias
         run: |
           # Entramos directamente a la carpeta functions donde está el package.json

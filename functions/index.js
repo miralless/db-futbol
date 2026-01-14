@@ -27,7 +27,18 @@ async function scriptIntegradoFutbol() {
     const baseDeDatosFutbol = [];
     const browser = await puppeteer.launch({ 
         headless: "new",
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-blink-features=AutomationControlled', '--disable-gpu'] 
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process', // Esto ayuda mucho en entornos con poca RAM como GitHub
+            '--ignore-certificate-errors',
+            '--ignore-ssl-errors',
+            '--allow-running-insecure-content'
+        ] 
     });
 
     try {
@@ -72,6 +83,12 @@ async function scriptIntegradoFutbol() {
             */
             try {
                 await page.goto(j.url, { waitUntil: 'domcontentloaded', waitUntil: 'networkidle0', timeout: 50000 });
+                try {
+                    const title = await page.title();
+                    console.log("Título de la página:", title);
+                } catch (e) {
+                    console.log("Error al obtener el título (posible bloqueo de IP)");
+                }
                 const stats = await page.evaluate((n) => {
                     const res = { nombre: n, origen: "LaPreferente", PJ: "0", Tit: "0", Sup: "0", Goles: "0", Am: "0", Roj: "0", timestamp: new Date().toISOString() };
                     const fila = document.querySelector('#estadisticasJugador tr.totales');
@@ -130,8 +147,6 @@ async function scriptIntegradoFutbol() {
             await page.evaluateOnNewDocument(() => {
                 Object.defineProperty(navigator, 'webdriver', { get: () => false });
             });
-            await page.screenshot({ path: 'captura_debug.png', fullPage: true });
-            console.log("Captura de pantalla realizada.");
             try {
                 await page.goto(e.url, { waitUntil: 'networkidle2', waitUntil: 'networkidle0', timeout: 50000 });
                 const data = await page.evaluate((nFiltro) => {
