@@ -27,7 +27,7 @@ async function scriptIntegradoFutbol() {
     const baseDeDatosFutbol = [];
     const browser = await puppeteer.launch({ 
         headless: "new",
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-blink-features=AutomationControlled'] 
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-blink-features=AutomationControlled', '--disable-gpu'] 
     });
 
     try {
@@ -71,7 +71,7 @@ async function scriptIntegradoFutbol() {
             console.log("--- DEBUG END ---");
             */
             try {
-                await page.goto(j.url, { waitUntil: 'domcontentloaded', timeout: 40000 });
+                await page.goto(j.url, { waitUntil: 'domcontentloaded', waitUntil: 'networkidle0', timeout: 50000 });
                 const stats = await page.evaluate((n) => {
                     const res = { nombre: n, origen: "LaPreferente", PJ: "0", Tit: "0", Sup: "0", Goles: "0", Am: "0", Roj: "0", timestamp: new Date().toISOString() };
                     const fila = document.querySelector('#estadisticasJugador tr.totales');
@@ -130,10 +130,10 @@ async function scriptIntegradoFutbol() {
             await page.evaluateOnNewDocument(() => {
                 Object.defineProperty(navigator, 'webdriver', { get: () => false });
             });
-            await page.screenshot({ path: 'captura_debug.png', fullPage: true });
-            console.log("Captura de pantalla realizada.");
+            /* await page.screenshot({ path: 'captura_debug.png', fullPage: true });
+            console.log("Captura de pantalla realizada."); */
             try {
-                await page.goto(e.url, { waitUntil: 'networkidle2', timeout: 40000 });
+                await page.goto(e.url, { waitUntil: 'networkidle2', waitUntil: 'networkidle0', timeout: 50000 });
                 const data = await page.evaluate((nFiltro) => {
                     const ahora = new Date();
                     const tablas = Array.from(document.querySelectorAll('table.lpfTable01'));
