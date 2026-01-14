@@ -28,3 +28,10 @@ jobs:
           node functions/index.js
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Subir Captura de Pantalla
+        uses: actions/upload-artifact@v4
+        if: always() # Para que suba la foto aunque el script falle
+        with:
+          name: debug-screenshot
+          path: captura_debug.png    

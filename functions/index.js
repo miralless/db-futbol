@@ -130,6 +130,8 @@ async function scriptIntegradoFutbol() {
             await page.evaluateOnNewDocument(() => {
                 Object.defineProperty(navigator, 'webdriver', { get: () => false });
             });
+            await page.screenshot({ path: 'captura_debug.png', fullPage: true });
+            console.log("Captura de pantalla realizada.");
             try {
                 await page.goto(e.url, { waitUntil: 'networkidle2', timeout: 40000 });
                 const data = await page.evaluate((nFiltro) => {
