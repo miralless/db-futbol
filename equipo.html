@@ -182,8 +182,8 @@
               }
 
               // Ahora limpiamos el resultado para el HTML
-              proximo.resultado = proximo.resultado.replace("S- ", "").replace("S-", "");
-              proximo.resultado = proximo.resultado.replace("S- ", "").replace("D-", "");
+              proximo.resultado = proximo.resultado.replace("S-", "");
+              proximo.resultado = proximo.resultado.replace("D-", "");
 
               nextTitle.innerHTML = `<h3>${jornada} (${fecha})</h3>`;
               teamContainer.appendChild(nextTitle);
@@ -265,7 +265,7 @@
 
             const esCasaProx = proximo.rival.includes("(C)");
             const rivalProxLimpio = proximo.rival.replace("(C)", "").replace("(F)", "").trim();
-            proximo.resultado = proximo.resultado.replace("S- ", "");
+            proximo.resultado = proximo.resultado.replace("S-", "");
             proximo.resultado = proximo.resultado.replace("D-", "");
 
             nextDetails.innerHTML = `
