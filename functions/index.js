@@ -16,6 +16,7 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 puppeteer.use(StealthPlugin());
 
+// Función auxiliar para crear IDs limpios (ej: "Ekain Etxebarria" -> "ekain_etxebarria")
 const crearIdDoc = (tipo, nombre) => {
     return `${tipo}_${nombre.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '')}`;
 };
@@ -26,15 +27,7 @@ async function scriptIntegradoFutbol() {
     const baseDeDatosFutbol = [];
     const browser = await puppeteer.launch({ 
         headless: "new",
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--no-first-run',
-            '--no-zygote',
-            // ELIMINADO: --single-process (causaba error en local)
-        ] 
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-blink-features=AutomationControlled'] 
     });
 
     try {
@@ -56,25 +49,29 @@ async function scriptIntegradoFutbol() {
             { nombre: "Cartagena", url: "https://www.lapreferente.com/E712C22270-1/fc-cartagena-sad" }
         ];
 
-        // --- EXTRACCIÓN JUGADORES (LAPREFERENTE) ---
+        // --- EXTRACCIÓN JUGADORES ---
         for (const j of jugadoresLaPreferente) {
             const page = await browser.newPage();
             await page.setViewport({ width: 1920, height: 1080 });
+            await page.setExtraHTTPHeaders({
+                'Accept-Language': 'es-ES,es;q=0.9'
+            });
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-
+            // await page.waitForSelector('.lpfTable01', { visible: true, timeout: 300000 });
+            await page.evaluateOnNewDocument(() => {
+                Object.defineProperty(navigator, 'webdriver', { get: () => false });
+            });
+            /*
+            const contenido = await page.content();
+            console.log("--- DEBUG START ---");
+            console.log("Longitud del HTML:", contenido.length);
+            // Esto imprimirá el texto visible para ver si hay un "Acceso denegado"
+            const textoVisible = await page.evaluate(() => document.body.innerText.substring(0, 500));
+            console.log("Texto visible:", textoVisible);
+            console.log("--- DEBUG END ---");
+            */
             try {
-                // Usamos domcontentloaded para que sea más rápido y no se cuelgue
-                await page.goto(j.url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-                
-                // GESTIÓN DEL MURO "UN MOMENTO..."
-                if ((await page.title()).includes("Un momento")) {
-                    console.log(`⏳ Muro detectado en ${j.nombre}. Esperando 15s...`);
-                    await new Promise(r => setTimeout(r, 15000));
-                }
-
-                // Esperamos a que la tabla específica exista antes de evaluar
-                await page.waitForSelector('#estadisticasJugador tr.totales', { timeout: 10000 }).catch(() => {});
-
+                await page.goto(j.url, { waitUntil: 'domcontentloaded', timeout: 40000 });
                 const stats = await page.evaluate((n) => {
                     const res = { nombre: n, origen: "LaPreferente", PJ: "0", Tit: "0", Sup: "0", Goles: "0", Am: "0", Roj: "0", timestamp: new Date().toISOString() };
                     const fila = document.querySelector('#estadisticasJugador tr.totales');
@@ -94,7 +91,6 @@ async function scriptIntegradoFutbol() {
             await page.close();
         }
 
-        // --- EXTRACCIÓN JUGADORES (FEDERACIÓN) ---
         for (const j of jugadoresFederacion) {
             const page = await browser.newPage();
             try {
@@ -126,22 +122,16 @@ async function scriptIntegradoFutbol() {
         for (const e of equiposLaPreferente) {
             const page = await browser.newPage();
             await page.setViewport({ width: 1920, height: 1080 });
+            await page.setExtraHTTPHeaders({
+                'Accept-Language': 'es-ES,es;q=0.9'
+            });
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-
+            // await page.waitForSelector('.lpfTable01', { visible: true, timeout: 300000 });
+            await page.evaluateOnNewDocument(() => {
+                Object.defineProperty(navigator, 'webdriver', { get: () => false });
+            });
             try {
-                await page.goto(e.url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-
-                if ((await page.title()).includes("Un momento")) {
-                    console.log(`⏳ Muro detectado en ${e.nombre}. Esperando 15s...`);
-                    await new Promise(r => setTimeout(r, 15000));
-                }
-
-                // Espera explícita a la tabla con clase lpfTable01
-                await page.waitForSelector('.lpfTable01', { timeout: 15000 }).catch(() => {});
-                
-                // Captura de depuración para ver si el muro ha pasado
-                await page.screenshot({ path: `debug_${e.nombre.replace(/\s/g, '')}.png` });
-
+                await page.goto(e.url, { waitUntil: 'networkidle2', timeout: 40000 });
                 const data = await page.evaluate((nFiltro) => {
                     const ahora = new Date();
                     const tablas = Array.from(document.querySelectorAll('table.lpfTable01'));
@@ -181,55 +171,91 @@ async function scriptIntegradoFutbol() {
             await page.close();
         }
 
-        // --- EQUIPO INDARTSU (FEDERACIÓN) ---
+        // --- EQUIPO INDARTSU ---
         const pageInd = await browser.newPage();
         try {
-            await pageInd.goto("https://www.fvf-bff.eus/pnfg/NPcd/NFG_VisCompeticiones_Grupo?cod_primaria=1000123&codequipo=30094&codgrupo=22682897", { waitUntil: 'networkidle2', timeout: 60000 });
+            await pageInd.goto("https://www.fvf-bff.eus/pnfg/NPcd/NFG_VisCompeticiones_Grupo?cod_primaria=1000123&codequipo=30094&codgrupo=22682897", { waitUntil: 'networkidle2' });
             const dataInd = await pageInd.evaluate(() => {
                 const filas = Array.from(document.querySelectorAll('tbody tr'));
                 const lista = [];
+
                 filas.forEach(f => {
                     const tds = f.querySelectorAll('td');
                     if (tds.length < 3) return;
+
+                    // 1. Extraer Jornada (la primera columna)
                     const jornadaNum = tds[0].innerText.trim();
+
+                    // 2. Extraer Equipos y Fecha/Hora (la segunda columna tiene 3 h5)
                     const h5s = Array.from(tds[1].querySelectorAll('h5'));
                     const local = h5s[0]?.innerText.trim() || "";
                     const visitante = h5s[1]?.innerText.trim() || "";
+                    
+                    // Limpiamos la fecha/hora de espacios raros (&nbsp;)
                     const fechaHoraTexto = h5s[2]?.innerText.replace(/\s+/g, ' ').trim() || ""; 
+                    // Separamos: "17-01-2026 15:30" -> ["17-01-2026", "15:30"]
                     const partesFecha = fechaHoraTexto.split(' ');
                     const soloFecha = partesFecha[0] || "";
                     const soloHora = partesFecha[1] || "";
+
+                    // 3. Extraer Resultado (la tercera columna)
                     const res = tds[2].innerText.trim();
+                    
+                    // Un partido se considera jugado si el resultado tiene números (ej: "1 - 0")
                     const yaJugado = /\d/.test(res);
+
                     lista.push({
+                        // Guardamos la jornada con la fecha: "JORNADA 16 - 10-01-2026"
                         infoJornada: `JORNADA ${jornadaNum} - ${soloFecha}`,
                         rival: local.toUpperCase().includes("INDARTSU") ? `${visitante} (C)` : `${local} (F)`,
+                        // Si ya se jugó, guardamos el marcador. Si no, la hora.
                         resultado: yaJugado ? res : soloHora,
                         yaJugado: yaJugado
                     });
                 });
+
                 const jugados = lista.filter(p => p.yaJugado);
                 const futuros = lista.filter(p => !p.yaJugado);
+
                 return {
-                    ultimo: jugados.length > 0 ? { infoJornada: jugados[jugados.length - 1].infoJornada, rival: jugados[jugados.length - 1].rival, resultado: jugados[jugados.length - 1].resultado } : null,
-                    proximo: futuros.length > 0 ? { infoJornada: futuros[0].infoJornada, rival: futuros[0].rival, resultado: futuros[0].resultado } : null
+                    ultimo: jugados.length > 0 ? { 
+                        infoJornada: jugados[jugados.length - 1].infoJornada, 
+                        rival: jugados[jugados.length - 1].rival, 
+                        resultado: jugados[jugados.length - 1].resultado 
+                    } : null,
+                    proximo: futuros.length > 0 ? { 
+                        infoJornada: futuros[0].infoJornada, 
+                        rival: futuros[0].rival, 
+                        resultado: futuros[0].resultado // Aquí ahora irá "15:30" directamente
+                    } : null
                 };
             });
+            
             baseDeDatosFutbol.push({ tipo: "equipo", nombre: "Indartsu", origen: "Federacion", ...dataInd, timestamp: new Date().toISOString() });
-        } catch (e) { console.error("❌ Error Indartsu:", e); }
+            console.log("✅ Datos extraídos (Jornada con fecha y Próximo con hora)");
+
+        } catch (e) { 
+            console.error("❌ Error Indartsu:", e); 
+        }
         await pageInd.close();
 
-        // --- SUBIDA A FIREBASE ---
+        // --- SUBIDA A FIREBASE (CON ACTUALIZACIÓN) ---
         if (baseDeDatosFutbol.length > 0) {
             console.log("\n📤 Actualizando documentos en Firebase...");
             const batch = db.batch();
+
             baseDeDatosFutbol.forEach(dato => {
+                // Generamos un ID único basado en el nombre y tipo
                 const customId = crearIdDoc(dato.tipo, dato.nombre);
                 const docRef = db.collection('seguimiento_futbol').doc(customId);
+                
+                // .set con { merge: true } asegura que si el documento existe se actualice, 
+                // y si no existe se cree.
                 batch.set(docRef, dato, { merge: true });
             });
+
             await batch.commit();
-            console.log("✅ Documentos actualizados correctamente.");
+            console.log("✅ Documentos actualizados correctamente (sin duplicados).");
         }
 
     } catch (error) { console.error("❌ Error General:", error); }

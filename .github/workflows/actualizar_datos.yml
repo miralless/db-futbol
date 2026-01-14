@@ -15,12 +15,7 @@ jobs:
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-
-      - name: Instalar dependencias del sistema para Puppeteer
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgbm-dev libnss3 libatk-bridge2.0-0 libgtk-3-0 libasound2t64    
+          node-version: '20'    
 
       - name: Instalar dependencias
         run: |
@@ -33,10 +28,3 @@ jobs:
           node functions/index.js
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-
-      - name: Subir Captura de Pantalla
-        uses: actions/upload-artifact@v4
-        if: always() # Para que suba la foto aunque el script falle
-        with:
-          name: debug-screenshot
-          path: captura_debug.png    
