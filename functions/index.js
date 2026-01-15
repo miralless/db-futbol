@@ -73,7 +73,7 @@ async function scriptIntegradoFutbol() {
             try {
                 await page.goto(j.url, { waitUntil: 'domcontentloaded', timeout: 40000 });
                 const stats = await page.evaluate((n) => {
-                    const res = { nombre: n, origen: "LaPreferente", PJ: "0", Tit: "0", Sup: "0", Goles: "0", Am: "0", Roj: "0", timestamp: new Date().toISOString() };
+                    const res = { nombre: n, PJ: "0", Tit: "0", Sup: "0", Goles: "0", Am: "0", Roj: "0" };
                     const fila = document.querySelector('#estadisticasJugador tr.totales');
                     if (fila) {
                         const ths = Array.from(fila.querySelectorAll('th'));
@@ -96,7 +96,7 @@ async function scriptIntegradoFutbol() {
             try {
                 await page.goto(j.url, { waitUntil: 'networkidle2', timeout: 40000 });
                 const stats = await page.evaluate((n) => {
-                    const res = { nombre: n, origen: "Federacion", PJ: "0", Tit: "0", Sup: "0", Goles: "0", Am: "0", Roj: "0", timestamp: new Date().toISOString() };
+                    const res = { nombre: n, PJ: "0", Tit: "0", Sup: "0", Goles: "0", Am: "0", Roj: "0" };
                     const celdas = Array.from(document.querySelectorAll('td'));
                     let bikoitza = 0, gorria = 0;
                     celdas.forEach((td, i) => {
@@ -166,7 +166,7 @@ async function scriptIntegradoFutbol() {
                         proximo: futuros[0] ? { infoJornada: futuros[0].infoJornada, rival: futuros[0].rival, resultado: futuros[0].resultado } : null
                     };
                 }, e.nombre);
-                baseDeDatosFutbol.push({ tipo: "equipo", nombre: e.nombre, origen: "LaPreferente", ...data, timestamp: new Date().toISOString() });
+                baseDeDatosFutbol.push({ nombre: e.nombre, tipo: "equipo", ...data });
             } catch (err) { console.error(`❌ Error equipo ${e.nombre}`); }
             await page.close();
         }
@@ -231,7 +231,7 @@ async function scriptIntegradoFutbol() {
                 };
             });
             
-            baseDeDatosFutbol.push({ tipo: "equipo", nombre: "Indartsu", origen: "Federacion", ...dataInd, timestamp: new Date().toISOString() });
+            baseDeDatosFutbol.push({ nombre: "Indartsu", tipo: "equipo", ...dataInd });
             console.log("✅ Datos extraídos (Jornada con fecha y Próximo con hora)");
 
         } catch (e) { 
