@@ -39,8 +39,8 @@
       text-align: center;
       flex: 1;
     }
-    .info-box { height: 90px; display: flex; align-items: center; justify-content: center; }
-    .stat-item { height: fit-content; padding-top: 5%; }
+    .info-box { height: 90px; display: flex; align-items: center; justify-content: center; background-color: #292929; }
+    .stat-item { height: fit-content; padding-top: 5%; background-color: #444444; }
     h2 { margin: 0; font-size: 1.3rem; }
     .point { cursor: pointer; }
     @media (min-width: 600px) { .stat-item { padding-bottom: 5%; } }
@@ -142,26 +142,81 @@ async function cargarDetalle() {
 
       // === Fila 3: Estadísticas Clave ===
       const filaStats = crearFila();
+
+      const camposEbroBA = [
+        { label: "JUGADOS", valor: 3 },
+        { label: "SIN JUGAR", valor: 16 },
+        { label: "TITULAR", valor: 2 },
+        { label: "SUPLENTE", valor: 1 },
+        { label: "GOLES", valor: 1 },
+        { label: "POR PARTIDO", valor: (dataStats.Goles / dataStats.PJ).toFixed(2) },
+        { label: "AMARILLAS", valor: 0 },
+        { label: "ROJAS", valor: 0 }
+      ]
+
       const campos = [
-        { label: "PARTIDOS", valor: dataStats.PJ },
+        { label: "JUGADOS", valor: dataStats.PJ },
+        { label: "SIN JUGAR", valor: dataStats.NJ },
         { label: "TITULAR", valor: dataStats.Tit },
-        { label: "GOLES", valor: dataStats.Goles },
+        { label: "SUPLENTE", valor: dataStats.Sup },
+        { label: dataStats.Goles >= 0 ? "GOLES" : "GOLES RECIB.", valor: dataStats.Goles > 0 ? dataStats.Goles : dataStats.Goles * (-1) },
+        { label: "POR PARTIDO", valor: dataStats.Goles > 0 ? (dataStats.Goles / dataStats.PJ).toFixed(2) : ((dataStats.Goles * (-1)) / dataStats.PJ).toFixed(2) },
         { label: "AMARILLAS", valor: dataStats.Am },
         { label: "ROJAS", valor: dataStats.Roj }
       ];
 
-      campos.forEach(c => {
-        const statDiv = document.createElement("div");
-        statDiv.classList.add("stat-item");
-        statDiv.innerHTML = `
-          <strong style="text-decoration: underline; font-size: 15px;">${c.label}</strong>
-          <br><br>
-          <p style="font-size: 18px; font-style: italic;">${c.valor ?? "0"}</p>
-        `;
-        filaStats.appendChild(statDiv);
-      });
-      
-      contenedor.appendChild(filaStats);
+      if (idNumerico != 4) {
+        campos.forEach(c => {
+          const statDiv = document.createElement("div");
+          statDiv.classList.add("stat-item");
+          statDiv.innerHTML = `
+            <strong style="text-decoration: underline; font-size: 15px;">${c.label}</strong>
+            <br><br>
+            <p style="font-size: 18px; font-style: italic;">${c.valor ?? "0"}</p>
+          `;
+          filaStats.appendChild(statDiv);
+        });
+        
+        contenedor.appendChild(filaStats);
+      } else {
+        var indexE = 0;
+        campos.forEach(c => {
+          const statDiv = document.createElement("div");
+          statDiv.classList.add("stat-item");
+          statDiv.innerHTML = `
+            <strong style="text-decoration: underline; font-size: 15px;">${c.label}</strong>
+            <br><br>
+            <p style="font-size: 18px; font-style: italic;">${c.valor - camposEbroBA[indexE].valor ?? "0"}</p>
+          `;
+          filaStats.appendChild(statDiv);
+          indexE++;
+        });
+
+        contenedor.appendChild(filaStats);
+
+        const filaBA = crearFila();
+        const equipoBox = crearBox(`<h2>Bilbao Athletic</h2>`);
+        const dorsalBox = crearBox(`<h2>#5</h2>`);
+
+        filaBA.appendChild(equipoBox);
+        filaBA.appendChild(dorsalBox);
+        contenedor.appendChild(filaBA);
+
+        const filaStatBA = crearFila();
+        
+        camposEbroBA.forEach(c => {
+          const statDiv = document.createElement("div");
+          statDiv.classList.add("stat-item");
+          statDiv.innerHTML = `
+            <strong style="text-decoration: underline; font-size: 15px;">${c.label}</strong>
+            <br><br>
+            <p style="font-size: 18px; font-style: italic;">${c.valor ?? "0"}</p>
+          `;
+          filaStatBA.appendChild(statDiv);
+        });
+
+        contenedor.appendChild(filaStatBA);
+      }
 
     } else {
       contenedor.innerHTML = `<p>Error: No se encontró el jugador en las colecciones.</p>`;

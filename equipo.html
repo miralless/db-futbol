@@ -13,10 +13,10 @@
   <style>
     /* ... (Mantenemos tus estilos CSS intactos) ... */
     .team-container { width: 100%; margin: 30px auto; display: flex; flex-direction: column; gap: 20px; padding: 0 20px; flex: 1; justify-content: center; }
-    .team-name { font-size: 1.8rem; text-align: center; color: white; background-color: #222; padding: 25px; border-radius: 10px; font-weight: bold; }
-    .titleInfo { font-size: 1rem; background-color: #222; color: white; padding: 15px; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+    .team-name { font-size: 1.8rem; text-align: center; color: white; background-color: #292929; padding: 25px; border-radius: 10px; font-weight: bold; }
+    .titleInfo { font-size: 1rem; background-color: #444444; color: white; padding: 15px; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
     .detailsDiv { display: flex; justify-content: space-around; gap: 10px; }
-    .partido { display: flex; width: 100%; font-weight: bold; font-size: 1rem; background-color: #222; color: white; padding: 15px; border-radius: 10px; align-items: center; justify-content: center; }
+    .partido { display: flex; width: 100%; font-weight: bold; font-size: 1rem; background-color: #444444; color: white; padding: 15px; border-radius: 10px; align-items: center; justify-content: center; }
     .verde { color: #00ff88; }
     .nombreEquipo { font-size: 15px; text-align: center; }
   </style>
@@ -181,11 +181,49 @@
                   fecha = `${nuevoDia}/${nuevoMes}/${nuevoAnio}`;
               }
 
+              function formatearFecha(fechaSucio) {
+                  // Dividimos la fecha por "/" (ej: "1/2/26" -> ["1", "2", "26"])
+                  const partes = fechaSucio.split('/');
+                  
+                  if (partes.length !== 3) return fechaSucio; // Si no tiene el formato esperado, devolver original
+
+                  const dia = partes[0].padStart(2, '0');  // Asegura 2 dígitos (1 -> 01)
+                  const mes = partes[1].padStart(2, '0');  // Asegura 2 dígitos (2 -> 02)
+                  let anio = partes[2];
+
+                  // Si el año solo tiene 2 dígitos (26), le ponemos el 20 delante
+                  if (anio.length === 2) {
+                      anio = "20" + anio;
+                  }
+
+                  return `${dia}/${mes}/${anio}`;
+              }
+
+              function convertirHora24h(stringSucio) {
+                  // 1. Extraemos la parte de la hora y el meridiano (ej: "6:00 PM")
+                  const match = stringSucio.match(/(\d{1,2}):(\d{2})\s?(AM|PM)/i);
+                  if (!match) return null;
+
+                  let [_, horas, minutos, meridiano] = match;
+                  horas = parseInt(horas);
+
+                  // 2. Lógica de conversión
+                  if (meridiano.toUpperCase() === 'PM' && horas < 12) {
+                      horas += 12;
+                  } else if (meridiano.toUpperCase() === 'AM' && horas === 12) {
+                      horas = 0;
+                  }
+
+                  // 3. Formateamos con ceros a la izquierda (ej: "06:00" o "18:00")
+                  const horaFinal = horas.toString().padStart(2, '0');
+                  return `${horaFinal}:${minutos}`;
+              }
+
               // Ahora limpiamos el resultado para el HTML
               proximo.resultado = proximo.resultado.replace("S-", "");
               proximo.resultado = proximo.resultado.replace("D-", "");
 
-              nextTitle.innerHTML = `<h3>${jornada} (${fecha})</h3>`;
+              nextTitle.innerHTML = `<h3>${jornada} (${teamName == "CD Derio" ? formatearFecha(proximo.resultado.split(" ")[0]) : proximo.resultado.split(" ")[0]})</h3>`;
               teamContainer.appendChild(nextTitle);
 
               const nextDetails = document.createElement("div");
@@ -196,11 +234,17 @@
 
               nextDetails.innerHTML = `
                   <div class="nombreEquipo partido ${esCasaProx ? 'verde' : ''}">${esCasaProx ? nombreOficial : rivalProxLimpio}</div>
-                  <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content;">${proximo.resultado}</div>
+                  <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content;">${teamName == "CD Derio" ? proximo.resultado.split(" ")[1] : convertirHora24h(proximo.resultado)}</div>
                   <div class="nombreEquipo partido ${!esCasaProx ? 'verde' : ''}">${!esCasaProx ? nombreOficial : rivalProxLimpio}</div>
               `;
               teamContainer.appendChild(nextDetails);
           }
+
+          const nextTitle = document.createElement("div");
+          nextTitle.className = "titleInfo";
+          nextTitle.innerHTML = `<h3>CLASIFICACIÓN</h3>`;
+          teamContainer.appendChild(nextTitle);
+
         } else if (teamName == "FC Cartagena") {
           // --- 2. Bloque Último Partido ---
           if (ultimo) {
@@ -268,35 +312,55 @@
             proximo.resultado = proximo.resultado.replace("S-", "");
             proximo.resultado = proximo.resultado.replace("D-", "");
 
+            function convertirHora24h(stringSucio) {
+                  // 1. Extraemos la parte de la hora y el meridiano (ej: "6:00 PM")
+                  const match = stringSucio.match(/(\d{1,2}):(\d{2})\s?(AM|PM)/i);
+                  if (!match) return null;
+
+                  let [_, horas, minutos, meridiano] = match;
+                  horas = parseInt(horas);
+
+                  // 2. Lógica de conversión
+                  if (meridiano.toUpperCase() === 'PM' && horas < 12) {
+                      horas += 12;
+                  } else if (meridiano.toUpperCase() === 'AM' && horas === 12) {
+                      horas = 0;
+                  }
+
+                  // 3. Formateamos con ceros a la izquierda (ej: "06:00" o "18:00")
+                  const horaFinal = horas.toString().padStart(2, '0');
+                  return `${horaFinal}:${minutos}`;
+              }
+
             nextDetails.innerHTML = `
                 <div class="nombreEquipo partido ${esCasaProx ? 'verde' : ''}">${esCasaProx ? nombreOficial : rivalProxLimpio}</div>
-                <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content;">${proximo.resultado}</div>
+                <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content;">${convertirHora24h(proximo.resultado)}</div>
                 <div class="nombreEquipo partido ${!esCasaProx ? 'verde' : ''}">${!esCasaProx ? nombreOficial : rivalProxLimpio}</div>
             `;
             teamContainer.appendChild(nextDetails);
           }
+
+          const nextTitle = document.createElement("div");
+          nextTitle.className = "titleInfo";
+          nextTitle.innerHTML = `<h3>CLASIFICACIÓN</h3>`;
+          teamContainer.appendChild(nextTitle);
         } else {
           // --- 2. Bloque Último Partido ---
         if (ultimo) {
           const lastTitle = document.createElement("div");
           lastTitle.className = "titleInfo";
 
-          var jornadaLimpia = ultimo.infoJornada
-            .replace(/schedule/gi, '')
-            .replace(/get_app/gi, '')
-            .trim();
+          var jornadaLimpia = ultimo.infoJornada.split(' ')[0] + ultimo.infoJornada.split(' ')[1]
 
-          jornadaLimpia = jornadaLimpia.replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/, (match, d, m, y) => {
+          /* var fecha = ultimo.infoJornada.split(' ')[0].replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/, (match, d, m, y) => {
               const dia = d.padStart(2, '0');
               const mes = m.padStart(2, '0');
               return `${dia}/${mes}/${y}`;
-          });
+          }); */
 
-          const jornada = jornadaLimpia.split(' - ')[0].split(' - ')[0];
-          var fecha = jornadaLimpia.split(' - ')[1];
-          fecha = fecha.replace("-", "/").replace("-", "/");
+          var hora = ultimo.infoJornada.split(' ')[3];
 
-          lastTitle.innerHTML = `<h3>${jornada} (${fecha})</h3>`;
+          lastTitle.innerHTML = `<h3>${jornadaLimpia} ${ultimo.infoJornada.split(" ")[2]}</h3>`;
           teamContainer.appendChild(lastTitle);
 
           const lastDetails = document.createElement("div");
@@ -323,22 +387,17 @@
           const nextTitle = document.createElement("div");
           nextTitle.className = "titleInfo";
 
-          var jornadaLimpia = proximo.infoJornada
-            .replace(/schedule/gi, '')
-            .replace(/get_app/gi, '')
-            .trim();
+          var jornadaLimpia = proximo.infoJornada.split(' ')[0] + proximo.infoJornada.split(' ')[1]
 
-          jornadaLimpia = jornadaLimpia.replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/, (match, d, m, y) => {
+          var fecha = proximo.resultado.split(' ')[0].replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/, (match, d, m, y) => {
               const dia = d.padStart(2, '0');
               const mes = m.padStart(2, '0');
               return `${dia}/${mes}/${y}`;
           });
 
-          const jornada = jornadaLimpia.split(' - ')[0].split(' - ')[0];
-          var fecha = jornadaLimpia.split(' - ')[1].split(' - ')[0];
-          fecha = fecha.replace("-", "/").replace("-", "/");
+          var hora = proximo.resultado.split(' ')[1];
 
-          nextTitle.innerHTML = `<h3>${jornada} (${fecha})</h3>`;
+          nextTitle.innerHTML = `<h3>${jornadaLimpia} (${fecha})</h3>`;
           teamContainer.appendChild(nextTitle);
 
           const nextDetails = document.createElement("div");
@@ -347,20 +406,130 @@
           const esCasaProx = proximo.rival.includes("(C)");
           const rivalProxLimpio = proximo.rival.replace("(C)", "").replace("(F)", "").trim();
 
-          const matchHora = proximo.resultado.match(/\d{2}:\d{2}/);
-          const horaLimpia = matchHora ? matchHora[0] : "-";
-
           const rivalProx = rivalProxLimpio.replace('"', "").replace('"', '').trim();
 
           nextDetails.innerHTML = `
               <div class="nombreEquipo partido ${esCasaProx ? 'verde' : ''}">${esCasaProx ? formatearNombreEquipo(nombreOficial) : formatearNombreEquipo(rivalProx)}</div>
-              <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content;">${horaLimpia}</div>
+              <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content;">${hora}</div>
               <div class="nombreEquipo partido ${!esCasaProx ? 'verde' : ''}">${!esCasaProx ? formatearNombreEquipo(nombreOficial) : formatearNombreEquipo(rivalProx)}</div>
           `;
           teamContainer.appendChild(nextDetails);
         }
-        }
 
+        try {
+          const refClas = doc(db, "seguimiento_futbol", "clasificacion_indartsu");
+          const snapClas = await getDoc(refClas);
+
+          if (snapClas.exists()) {
+            const data = snapClas.data();
+            const tablaData = data.tabla;
+            const nextTitle = document.createElement("div");
+            nextTitle.className = "titleInfo";
+            nextTitle.innerHTML = `<h3>CLASIFICACIÓN</h3>`;
+            teamContainer.appendChild(nextTitle);
+
+            const containerClasificacion = document.createElement("div");
+            containerClasificacion.style.padding = "5px";
+            containerClasificacion.style.borderRadius = "10px";
+            containerClasificacion.style.backgroundColor = "#444444";
+            teamContainer.appendChild(containerClasificacion);
+
+            const posi = document.createElement("div");
+            const nombre = document.createElement("div");
+            const puntos = document.createElement("div");
+
+            let posicion = 1;
+
+            tablaData.forEach(element => {
+              const containerFila = document.createElement("div");
+              // 1. Forzamos a que sea una fila horizontal que ocupe todo el ancho
+              containerFila.style.display = "flex";
+              containerFila.style.width = "100%";
+              containerFila.style.alignItems = "center";
+              containerFila.style.marginBottom = "10px";
+              containerFila.style.padding = "0"; 
+              // containerFila.style.backgroundColor = "#333333";
+              
+              // Opcional: añade tu clase para que tenga el fondo gris que usas en otros lados
+              containerFila.className = "partido"; 
+
+              const pos = document.createElement("div");
+              pos.style.width = "30px"; // Ancho fijo para que todos los números queden alineados
+              pos.style.fontWeight = "bold";
+              pos.style.backgroundColor = "#333333"
+              pos.style.borderRadius = "10px";
+              pos.style.width = "10%";
+              pos.style.height = "50px";
+              pos.style.display = "flex";
+              pos.style.alignItems = "center";   // Centrado vertical
+              pos.style.justifyContent = "center"; // Centrado horizontal
+              pos.innerHTML = `${posicion++}`;
+              if (element.nombre == "INDARTSU") {
+                pos.classList.add("verde");
+              }
+              if (posicion > 17) {
+                pos.style.backgroundColor = "#552222";
+              } else if (posicion < 4) {
+                pos.style.backgroundColor = "#113311";
+              }
+              containerFila.appendChild(pos);
+
+              const nombreEq = document.createElement("div");
+              // 2. Usamos flex-grow para que el nombre ocupe el espacio restante
+              nombreEq.style.flexGrow = "1";
+              nombreEq.style.textAlign = "left";
+              nombreEq.style.backgroundColor = "#333333"
+              nombreEq.style.borderRadius = "10px";
+              nombreEq.style.marginLeft = "5px";
+              nombreEq.style.paddingLeft = "15px";
+              nombreEq.style.height = "50px";
+              nombreEq.style.display = "flex";
+              nombreEq.style.alignItems = "center";   // Centrado vertical
+              
+              const nombreLimpio = element.nombre.replace(/"/g, '').trim();
+              nombreEq.innerHTML = formatearNombreEquipo(nombreLimpio);
+              if (element.nombre == "INDARTSU") {
+                nombreEq.classList.add("verde");
+                nombreEq.innerHTML = "Indartsu Club";
+              } else if (element.nombre == "LEMOAHARROBI") {
+                nombreEq.innerHTML = "Lemoa Harrobi";
+              }
+              if (posicion > 17) {
+                nombreEq.style.backgroundColor = "#552222";
+              } else if (posicion < 4) {
+                nombreEq.style.backgroundColor = "#113311";
+              }
+              containerFila.appendChild(nombreEq);
+
+              const puntos = document.createElement("div");
+              let pts = parseInt(element.EmpatadosCasa) + parseInt(element.EmpatadosFuera) + parseInt((element.GanadosCasa * 3)) + parseInt((element.GanadosFuera * 3));
+              puntos.innerHTML = `${pts}`;
+              puntos.style.width = "50px";
+              puntos.style.fontWeight = "bold";
+              puntos.style.backgroundColor = "#333333"
+              puntos.style.borderRadius = "10px";
+              puntos.style.height = "50px";
+              puntos.style.display = "flex";
+              puntos.style.alignItems = "center";   // Centrado vertical
+              puntos.style.justifyContent = "center"; // Centrado horizontal
+              puntos.style.marginLeft = "5px";
+              if (element.nombre == "INDARTSU") {
+                puntos.classList.add("verde");
+              }
+              if (posicion > 17) {
+                puntos.style.backgroundColor = "#552222";
+              } else if (posicion < 4) {
+                puntos.style.backgroundColor = "#113311";
+              }
+              containerFila.appendChild(puntos);
+
+              containerClasificacion.appendChild(containerFila);
+          });
+          }
+        } catch (error) {
+          // Salta el bloque de clasificación si hay error
+        }
+      }
       } else {
         teamContainer.innerHTML = `<p>No se encontraron estadísticas para este equipo.</p>`;
       }
