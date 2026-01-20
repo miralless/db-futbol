@@ -429,14 +429,62 @@
             teamContainer.appendChild(nextTitle);
 
             const containerClasificacion = document.createElement("div");
-            containerClasificacion.style.padding = "5px";
+            containerClasificacion.style.padding = "10px";
             containerClasificacion.style.borderRadius = "10px";
             containerClasificacion.style.backgroundColor = "#444444";
             teamContainer.appendChild(containerClasificacion);
 
+            const containerFila1 = document.createElement("div");
+            // 1. Forzamos a que sea una fila horizontal que ocupe todo el ancho
+            containerFila1.style.display = "flex";
+            containerFila1.style.width = "100%";
+            containerFila1.style.alignItems = "center";
+            containerFila1.style.marginBottom = "10px";
+            containerFila1.style.padding = "0";
+
             const posi = document.createElement("div");
             const nombre = document.createElement("div");
             const puntos = document.createElement("div");
+
+            // posi.style.minWidth = "30px" // Ancho fijo para que todos los números queden alineados
+            posi.style.fontWeight = "bold";
+            posi.style.backgroundColor = "#292929"
+            posi.style.borderRadius = "10px";
+            posi.style.width = "18%";
+            posi.style.height = "50px";
+            posi.style.display = "flex";
+            posi.style.alignItems = "center";   // Centrado vertical
+            posi.style.justifyContent = "center"; // Centrado horizontal
+            posi.innerHTML = `POS`;
+
+            nombre.style.flexGrow = "1";
+            nombre.style.textAlign = "left";
+            nombre.style.backgroundColor = "#292929"
+            nombre.style.borderRadius = "10px";
+            nombre.style.marginLeft = "5px";
+            nombre.style.paddingLeft = "15px";
+            nombre.style.height = "50px";
+            nombre.style.display = "flex";
+            nombre.style.alignItems = "center";
+            nombre.style.fontWeight = "bold";
+            nombre.innerHTML = "EQUIPO";
+
+            puntos.style.width = "18%";
+            puntos.style.fontWeight = "bold";
+            puntos.style.backgroundColor = "#292929"
+            puntos.style.borderRadius = "10px";
+            puntos.style.height = "50px";
+            puntos.style.display = "flex";
+            puntos.style.alignItems = "center";   // Centrado vertical
+            puntos.style.justifyContent = "center"; // Centrado horizontal
+            puntos.style.marginLeft = "5px";
+            puntos.innerHTML = `PTS`;
+
+            containerFila1.appendChild(posi);
+            containerFila1.appendChild(nombre);
+            containerFila1.appendChild(puntos);
+
+            containerClasificacion.appendChild(containerFila1);
 
             let posicion = 1;
 
@@ -454,11 +502,11 @@
               containerFila.className = "partido"; 
 
               const pos = document.createElement("div");
-              pos.style.width = "30px"; // Ancho fijo para que todos los números queden alineados
+              // pos.style.minWidth = "fit-content"
               pos.style.fontWeight = "bold";
               pos.style.backgroundColor = "#333333"
               pos.style.borderRadius = "10px";
-              pos.style.width = "10%";
+              pos.style.width = "18%";
               pos.style.height = "50px";
               pos.style.display = "flex";
               pos.style.alignItems = "center";   // Centrado vertical
@@ -504,7 +552,7 @@
               const puntos = document.createElement("div");
               let pts = parseInt(element.EmpatadosCasa) + parseInt(element.EmpatadosFuera) + parseInt((element.GanadosCasa * 3)) + parseInt((element.GanadosFuera * 3));
               puntos.innerHTML = `${pts}`;
-              puntos.style.width = "50px";
+              puntos.style.width = "18%";
               puntos.style.fontWeight = "bold";
               puntos.style.backgroundColor = "#333333"
               puntos.style.borderRadius = "10px";
@@ -522,6 +570,75 @@
                 puntos.style.backgroundColor = "#113311";
               }
               containerFila.appendChild(puntos);
+
+              containerFila.addEventListener("click", () => {
+                const pj = parseInt(element.GanadosCasa) + parseInt(element.GanadosFuera) + 
+                parseInt(element.EmpatadosCasa) + parseInt(element.EmpatadosFuera) + 
+                parseInt(element.PerdidosCasa) + parseInt(element.PerdidosFuera);
+    
+                const pg = parseInt(element.GanadosCasa) + parseInt(element.GanadosFuera);
+                const pe = parseInt(element.EmpatadosCasa) + parseInt(element.EmpatadosFuera);
+                const pp = parseInt(element.PerdidosCasa) + parseInt(element.PerdidosFuera);
+
+                // Verificamos si ya estamos mostrando las estadísticas buscando un ID o clase específica
+                const yaExpandido = nombreEq.querySelector(".stats-container");
+
+                if (yaExpandido) {
+                    // Si ya está expandido, volvemos al estado original
+                    nombreEq.style.flexGrow = "1";
+                    nombreEq.style.textAlign = "left";
+                    nombreEq.style.backgroundColor = cargarColor(pos.innerText);
+                    nombreEq.style.borderRadius = "10px";
+                    nombreEq.style.marginLeft = "5px";
+                    nombreEq.style.paddingLeft = "15px";
+                    nombreEq.style.height = "50px";
+                    nombreEq.style.display = "flex";
+                    nombreEq.style.alignItems = "center"; 
+                    nombreEq.style.flexDirection = "row";
+                    
+                    pos.style.height = "50px";
+                    puntos.style.height = "50px";
+                    nombreEq.innerHTML = element.nombre === "INDARTSU" ? "Indartsu Club" : formatearNombreEquipo(nombreLimpio);
+                } else {
+                    // Aumentamos la altura para que quepan las 3 líneas (Nombre + PJ + G/E/P)
+                    nombreEq.style.height = "auto"; 
+                    nombreEq.style.paddingTop = "10px";
+                    nombreEq.style.paddingBottom = "10px";
+                    nombreEq.style.paddingRight = "15px";
+
+                    nombreEq.style.display = "flex";
+                    nombreEq.style.flexDirection = "column";
+
+                    nombreEq.innerHTML = `
+                        <span style="font-size: 1rem; font-weight: bold; margin-bottom: 12px; color: ${element.nombre === "INDARTSU" ? "#00ff88" : "white"}; width: 100%; text-align: left; text-decoration: underline;">
+                            ${element.nombre === "INDARTSU" ? "Indartsu Club" : formatearNombreEquipo(nombreLimpio)}
+                        </span>
+
+                        <div style="position: relative; width: 100%; padding: 15px 10px 10px 10px; border: 2px solid ${element.nombre === "INDARTSU" ? "#00ff88" : "white"}; border-radius: 8px; margin-top: 5px;">
+                            
+                            <span style="position: absolute; top: -10px; left: 10px; background-color: ${cargarColor(pos.innerText)}; padding: 0 5px; font-size: 0.8rem; color: ${element.nombre === "INDARTSU" ? "#00ff88" : "white"};">
+                                <strong>Jugados: </strong><i>${pj}</i>
+                            </span>
+                            
+                            <div class="stats-container" style="display: flex; flex-direction: column; gap: 8px;">
+                                <div style="display: flex; width: 100%; font-size: 0.75rem; color: ${element.nombre === "INDARTSU" ? "#00ff88" : "white"};">
+                                    <span style="flex: 1;"><strong>G:</strong> <i>${pg}</i></span>
+                                    <span style="flex: 1; text-align: center;"><strong>E:</strong> <i>${pe}</i></span>
+                                    <span style="flex: 1; text-align: right;"><strong>P:</strong> <i>${pp}</i></span>
+                                </div>
+
+                                <div style="display: flex; width: 100%; font-size: 0.75rem; color: ${element.nombre === "INDARTSU" ? "#00ff88" : "white"}; border-top: 2px solid ${element.nombre === "INDARTSU" ? "#00ff88" : "white"}; pt: 5px; margin-top: 2px; padding-top: 5px;">
+                                    <span style="flex: 1;"><strong>GF:</strong> <i>${element.GolesFavor}</i></span>
+                                    <span style="flex: 1; text-align: right;"><strong>GC:</strong> <i>${element.GolesContra}</i></span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    pos.style.height = nombreEq.scrollHeight + "px";
+                    puntos.style.height = nombreEq.scrollHeight + "px";
+                }
+              });
 
               containerClasificacion.appendChild(containerFila);
           });
@@ -551,6 +668,16 @@
         return palabra.charAt(0).toUpperCase() + palabra.slice(1);
     }).join(' ');
 }
+
+  function cargarColor(posicion) {
+    if (posicion >= 17) {
+      return "#552222";
+    } else if (posicion <= 2) {
+      return "#113311";
+    } else {
+      return "#333333";
+    }
+  }
 
   cargarEquipo();
 </script>
