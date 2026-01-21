@@ -5,12 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="DB Football">
-  <!-- <link rel="manifest" href="/db-futbol/manifest.json"> -->
+  <meta name="apple-mobile-web-app-title" content="PP Football">
 
-  <!-- Icono que se verá en la pantalla de inicio -->
   <link rel="apple-touch-icon" href="icono.png">
-  <title>DB Football</title>
+  <title>PP Football</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
     :root {
@@ -20,17 +18,16 @@
       --accent-color: #1a1a1a;
     }
 
-    /* Pantalla de carga centrada */
     .loading-overlay {
       position: fixed;
       inset: 0;
-      display: flex;
+      display: none; /* Se controla por JS */
       align-items: center;
       justify-content: center;
       flex-direction: column;
       gap: 16px;
       z-index: 9999;
-      background: rgba(0,0,0,0.0);
+      background: var(--background-color); 
     }
 
     .spinner {
@@ -55,7 +52,7 @@
       width: 0%;
       height: 100%;
       background: linear-gradient(90deg, var(--primary-color), #66ffad 80%);
-      transition: width 0.12s linear;
+      transition: width 0.1s linear;
     }
     .percent {
       color: var(--text-color);
@@ -63,7 +60,6 @@
       text-align: center;
     }
 
-    /* Desactivar menú */
     .menu a.disabled {
       pointer-events: none;
       opacity: 0.45;
@@ -72,14 +68,13 @@
 </head>
 <body>
   <header class="navbar">
-    <h1 class="logo">DB Football 2025/26</h1>
+    <h1 class="logo">PP Football 2025/26</h1>
     <nav class="menu">
       <a href="index.html">Inicio</a>
       <a href="equipos.html">Equipos</a>
     </nav>
   </header>
 
-  <!-- Overlay de carga -->
   <div class="loading-overlay" id="loadingOverlay">
     <div class="spinner"></div>
     <div class="progress-bar">
@@ -88,12 +83,10 @@
     <div class="percent" id="percentText">0%</div>
   </div>
 
-  <div class="content">
-    <!-- Aquí aparecerán los divs de jugadores -->
-  </div>
+  <div class="content"></div>
 
   <footer class="footer">
-    <p>© 2025 DB Football. Todos los derechos reservados.</p>
+    <p>© 2025 PP Football. Todos los derechos reservados.</p>
   </footer>
 
   <script type="module">
@@ -110,91 +103,66 @@
     const menuLinks = document.querySelectorAll(".menu a");
     const content = document.querySelector(".content");
 
-    // Bloquear menú
-    menuLinks.forEach(a => a.classList.add("disabled"));
-
-    // Barra de progreso 90 segundos no lineal (demo 4.5s)
-    function iniciarBarraProgreso(duracionMs = 4500) {
-      return new Promise(resolve => {
-        const inicio = performance.now();
-        function paso(now) {
-          const t = Math.min(1, (now - inicio) / duracionMs);
-          const eased = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2;
-          const pct = Math.round(eased*100);
-          progressFill.style.width = pct + "%";
-          percentText.textContent = pct + "%";
-          if (t < 1) requestAnimationFrame(paso);
-          else resolve();
-        }
-        requestAnimationFrame(paso);
-      });
+    // Función para manejar la barra visualmente
+    function actualizarProgreso(valor) {
+      progressFill.style.width = valor + "%";
+      percentText.textContent = valor + "%";
     }
 
-    // Leer jugadores de Firebase
     async function cargarPersonasFirebase() {
-      content.innerHTML = "";
       try {
+        actualizarProgreso(30); // Progreso inicial al empezar la llamada
         const snapshot = await getDocs(collection(db, "Personas"));
         const jugadores = [];
+        
         snapshot.forEach(doc => {
           const persona = doc.data();
           jugadores.push({ id: doc.id, nombre: persona.nombre, apellido: persona.apellido });
         });
 
-        // Guardar jugadores en localStorage
+        // Guardamos en caché por si otras páginas lo necesitan, pero no lo usamos para pintar aquí
         localStorage.setItem("jugadores", JSON.stringify(jugadores));
 
-        // Crear divs
-        jugadores.forEach(p => {
-          const div = document.createElement("div");
-          div.classList.add("item");
-          div.innerHTML = `<strong>${p.nombre} ${p.apellido}</strong>`;
-          div.addEventListener("click", () => {
-            window.location.href = `jugador.html?id=${encodeURIComponent(p.id)}`;
-          });
-          content.appendChild(div);
-        });
+        actualizarProgreso(80); // Progreso al terminar de descargar datos
+        
+        renderizarJugadores(jugadores);
+        actualizarProgreso(100);
       } catch(err) {
         console.error("Error leyendo Firebase:", err);
         content.innerHTML = "<p style='color:#f88; text-align:center;'>Error al cargar jugadores.</p>";
       }
     }
 
-    // Leer resultados Magic Loops de Firebase y guardar en localStorage como JSON
-    async function cargarResultadosMagicLoops() {
-      try {
-        const jugadoresDoc = await getDoc(doc(db, "MagicLoopsResultados", "Jugadores"));
-        const equiposDoc = await getDoc(doc(db, "MagicLoopsResultados", "Equipos"));
-
-        if (jugadoresDoc.exists()) {
-          const jsonJugadores = jugadoresDoc.data().resultado;
-          const jugadoresParsed = JSON.parse(jsonJugadores);
-          localStorage.setItem("datosMagic", JSON.stringify(jugadoresParsed));
-          console.log("Magic Jugadores:", jugadoresParsed);
-        }
-
-        if (equiposDoc.exists()) {
-          const jsonEquipos = equiposDoc.data().resultado;
-          const equiposParsed = JSON.parse(jsonEquipos);
-          localStorage.setItem("magicEquipos", JSON.stringify(equiposParsed));
-          console.log("Magic Equipos:", equiposParsed);
-        }
-
-      } catch(err) {
-        console.error("Error leyendo Magic Loops de Firebase:", err);
-      }
+    function renderizarJugadores(jugadores) {
+      content.innerHTML = ""; 
+      jugadores.forEach(p => {
+          const div = document.createElement("div");
+          div.classList.add("item");
+          div.innerHTML = `<strong>${p.nombre} ${p.apellido}</strong>`;
+          div.addEventListener("click", () => {
+              window.location.href = `jugador.html?id=${encodeURIComponent(p.id)}`;
+          });
+          content.appendChild(div);
+      });
     }
 
-    // Flujo principal
+    // --- FLUJO UNIFICADO ---
     window.addEventListener("DOMContentLoaded", async () => {
-      await iniciarBarraProgreso(1250);
+      // 1. Mostrar overlay y bloquear menú SIEMPRE
+      loadingOverlay.style.display = "flex";
+      menuLinks.forEach(a => a.classList.add("disabled"));
+      actualizarProgreso(10);
 
-      await cargarResultadosMagicLoops();
-      await cargarPersonasFirebase();
+      // 2. Ejecutar cargas en paralelo para ganar tiempo
+      await Promise.all([
+        cargarPersonasFirebase()
+      ]);
 
-      // Ocultar overlay y habilitar menú
-      loadingOverlay.style.display = "none";
-      menuLinks.forEach(a => a.classList.remove("disabled"));
+      // 3. Pequeño retardo para que el usuario vea el 100% y ocultar
+      setTimeout(() => {
+        loadingOverlay.style.display = "none";
+        menuLinks.forEach(a => a.classList.remove("disabled"));
+      }, 300);
     });
   </script>
 </body>

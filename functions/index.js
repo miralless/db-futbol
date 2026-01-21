@@ -208,7 +208,157 @@ async function scriptIntegradoFutbol() {
         } catch (e) { console.error("❌ Error Indartsu"); }
         await pageInd.close();
 
-        // --- 2.1 CLASIFICACIÓN INDARTSU (CORREGIDO) ---
+        // --- 2.1 CLASIFICACIÓN FC CARTAGENA ---
+        const pageClasCartagena = await browser.newPage();
+        try {
+            // URL de LaPreferente para el Eibar B
+            await pageClasCartagena.goto("https://www.lapreferente.com/E712C22270-1/fc-cartagena-sad", { waitUntil: 'networkidle2' });
+            
+            const tablaCartagena = await pageClasCartagena.evaluate(() => {
+                // Buscamos la tabla con el ID específico
+                const tabla = document.getElementById('tableClasif');
+                if (!tabla) return [];
+
+                // Obtenemos las filas del cuerpo de la tabla
+                const filas = Array.from(tabla.querySelectorAll('tbody tr'));
+                
+                return filas.map(f => {
+                    const tds = f.querySelectorAll('td');
+                    
+                    // Verificamos que la fila tenga al menos 10 celdas para evitar errores
+                    if (tds.length < 10) return null;
+
+                    // Mapeo según tus instrucciones: 3º (índice 2) y 5º-10º (índices 4-9)
+                    // Nota: En LaPreferente las columnas suelen ser PJ, G, E, P, GF, GC...
+                    return {
+                        nombre: tds[2]?.innerText.trim(),         // 3º TD: Nombre Equipo
+                        Jugados: tds[4]?.innerText.trim(),        // 5º TD: Partidos Jugados
+                        Ganados: tds[5]?.innerText.trim(),        // 6º TD: Ganados
+                        Empatados: tds[6]?.innerText.trim(),      // 7º TD: Empatados
+                        Perdidos: tds[7]?.innerText.trim(),       // 8º TD: Perdidos
+                        GolesFavor: tds[8]?.innerText.trim(),     // 9º TD: Goles a Favor
+                        GolesContra: tds[9]?.innerText.trim()      // 10º TD: Goles en Contra
+                    };
+                }).filter(e => e !== null);
+            });
+
+            if (tablaCartagena.length > 0) {
+                // Lo guardamos en tu array de base de datos
+                baseDeDatosFutbol.push({ 
+                    nombre: "FC Cartagena", 
+                    tipo: "clasificacion", 
+                    origen: "LaPreferente", 
+                    tabla: tablaCartagena 
+                });
+                console.log("✅ Clasificación 1ª RFEF (Gr. 2) extraída");
+            }
+        } catch (e) { 
+            console.error("❌ Error Clasificación FC Cartagena:", e); 
+        } finally {
+            await pageClasCartagena.close();
+        }
+
+        // --- 2.2 CLASIFICACIÓN EIBAR B ---
+        const pageClasEibar = await browser.newPage();
+        try {
+            // URL de LaPreferente para el Eibar B
+            await pageClasEibar.goto("https://www.lapreferente.com/E5847C22299-19/sd-eibar-b", { waitUntil: 'networkidle2' });
+            
+            const tablaEibar = await pageClasEibar.evaluate(() => {
+                // Buscamos la tabla con el ID específico
+                const tabla = document.getElementById('tableClasif');
+                if (!tabla) return [];
+
+                // Obtenemos las filas del cuerpo de la tabla
+                const filas = Array.from(tabla.querySelectorAll('tbody tr'));
+                
+                return filas.map(f => {
+                    const tds = f.querySelectorAll('td');
+                    
+                    // Verificamos que la fila tenga al menos 10 celdas para evitar errores
+                    if (tds.length < 10) return null;
+
+                    // Mapeo según tus instrucciones: 3º (índice 2) y 5º-10º (índices 4-9)
+                    // Nota: En LaPreferente las columnas suelen ser PJ, G, E, P, GF, GC...
+                    return {
+                        nombre: tds[2]?.innerText.trim(),         // 3º TD: Nombre Equipo
+                        Jugados: tds[4]?.innerText.trim(),        // 5º TD: Partidos Jugados
+                        Ganados: tds[5]?.innerText.trim(),        // 6º TD: Ganados
+                        Empatados: tds[6]?.innerText.trim(),      // 7º TD: Empatados
+                        Perdidos: tds[7]?.innerText.trim(),       // 8º TD: Perdidos
+                        GolesFavor: tds[8]?.innerText.trim(),     // 9º TD: Goles a Favor
+                        GolesContra: tds[9]?.innerText.trim()      // 10º TD: Goles en Contra
+                    };
+                }).filter(e => e !== null);
+            });
+
+            if (tablaEibar.length > 0) {
+                // Lo guardamos en tu array de base de datos
+                baseDeDatosFutbol.push({ 
+                    nombre: "Eibar B", 
+                    tipo: "clasificacion", 
+                    origen: "LaPreferente", 
+                    tabla: tablaEibar 
+                });
+                console.log("✅ Clasificación 2ª RFEF (Gr. 2) extraída");
+            }
+        } catch (e) { 
+            console.error("❌ Error Clasificación Eibar B:", e); 
+        } finally {
+            await pageClasEibar.close();
+        }
+
+        // --- 2.3 CLASIFICACIÓN CD DERIO ---
+        const pageClasDerio = await browser.newPage();
+        try {
+            // URL de LaPreferente para el Eibar B
+            await pageClasDerio.goto("https://www.lapreferente.com/E10466C22283-19/cd-derio", { waitUntil: 'networkidle2' });
+            
+            const tablaDerio = await pageClasDerio.evaluate(() => {
+                // Buscamos la tabla con el ID específico
+                const tabla = document.getElementById('tableClasif');
+                if (!tabla) return [];
+
+                // Obtenemos las filas del cuerpo de la tabla
+                const filas = Array.from(tabla.querySelectorAll('tbody tr'));
+                
+                return filas.map(f => {
+                    const tds = f.querySelectorAll('td');
+                    
+                    // Verificamos que la fila tenga al menos 10 celdas para evitar errores
+                    if (tds.length < 10) return null;
+
+                    // Mapeo según tus instrucciones: 3º (índice 2) y 5º-10º (índices 4-9)
+                    // Nota: En LaPreferente las columnas suelen ser PJ, G, E, P, GF, GC...
+                    return {
+                        nombre: tds[2]?.innerText.trim(),         // 3º TD: Nombre Equipo
+                        Jugados: tds[4]?.innerText.trim(),        // 5º TD: Partidos Jugados
+                        Ganados: tds[5]?.innerText.trim(),        // 6º TD: Ganados
+                        Empatados: tds[6]?.innerText.trim(),      // 7º TD: Empatados
+                        Perdidos: tds[7]?.innerText.trim(),       // 8º TD: Perdidos
+                        GolesFavor: tds[8]?.innerText.trim(),     // 9º TD: Goles a Favor
+                        GolesContra: tds[9]?.innerText.trim()      // 10º TD: Goles en Contra
+                    };
+                }).filter(e => e !== null);
+            });
+
+            if (tablaDerio.length > 0) {
+                // Lo guardamos en tu array de base de datos
+                baseDeDatosFutbol.push({ 
+                    nombre: "CD Derio", 
+                    tipo: "clasificacion", 
+                    origen: "LaPreferente", 
+                    tabla: tablaDerio 
+                });
+                console.log("✅ Clasificación 3ª RFEF (Gr. 4) extraída");
+            }
+        } catch (e) { 
+            console.error("❌ Error Clasificación CD Derio:", e); 
+        } finally {
+            await pageClasDerio.close();
+        }
+
+        // --- 2.4 CLASIFICACIÓN INDARTSU ---
         const pageClasInd = await browser.newPage();
         try {
             await pageClasInd.goto("https://www.fvf-bff.eus/pnfg/NPcd/NFG_VisClasificacion?cod_primaria=1000120&codjornada=17&codcompeticion=22620319&codgrupo=22682897&codjornada=17&cod_agrupacion=1773563", { waitUntil: 'networkidle2' });
@@ -240,7 +390,7 @@ async function scriptIntegradoFutbol() {
             });
             if (tablaClas.length > 0) {
                 baseDeDatosFutbol.push({ nombre: "Indartsu", tipo: "clasificacion", origen: "Federacion", tabla: tablaClas });
-                console.log("✅ Clasificación Indartsu extraída (columnas 3, 5-14)");
+                console.log("✅ Clasificación 1ª REG (Gr. 2) extraída");
             }
         } catch (e) { console.error("❌ Error Clasificación Indartsu"); }
         await pageClasInd.close();

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="DB Football">
+  <meta name="apple-mobile-web-app-title" content="PP Football">
   <link rel="manifest" href="/db-futbol/manifest.json">
   <link rel="apple-touch-icon" href="icono.png">
   <title>Equipo</title>
@@ -23,7 +23,7 @@
 </head>
 <body>
   <header class="navbar">
-    <h1 class="logo">DB Football 2025/26</h1>
+    <h1 class="logo">PP Football 2025/26</h1>
     <nav class="menu">
       <a href="index.html">Inicio</a>
       <a href="equipos.html">Equipos</a>
@@ -33,7 +33,7 @@
   <div id="teamInfo" class="team-container"></div>
 
   <footer class="footer">
-    <p>© 2025 DB Football. Todos los derechos reservados.</p>
+    <p>© 2025 PP Football. Todos los derechos reservados.</p>
   </footer>
 
   <script type="module">
@@ -240,10 +240,281 @@
               teamContainer.appendChild(nextDetails);
           }
 
-          const nextTitle = document.createElement("div");
-          nextTitle.className = "titleInfo";
-          nextTitle.innerHTML = `<h3>CLASIFICACIÓN</h3>`;
-          teamContainer.appendChild(nextTitle);
+          function nombreClasif(nombre) {
+            if (nombre == "CD Derio") return "cd_derio";
+            if (nombre == "SD Eibar B") return "eibar_b";
+          }
+
+          try {
+            const refClas = doc(db, "seguimiento_futbol", `clasificacion_${nombreClasif(teamName)}`);
+            const snapClas = await getDoc(refClas);
+
+            if (snapClas.exists()) {
+              const data = snapClas.data();
+              const tablaData = data.tabla;
+              const nextTitle = document.createElement("div");
+              nextTitle.className = "titleInfo";
+              nextTitle.innerHTML = `<h3>CLASIFICACIÓN</h3>`;
+              teamContainer.appendChild(nextTitle);
+
+              const containerClasificacion = document.createElement("div");
+              containerClasificacion.style.padding = "10px";
+              containerClasificacion.style.borderRadius = "10px";
+              containerClasificacion.style.backgroundColor = "#444444";
+              teamContainer.appendChild(containerClasificacion);
+
+              const containerFila1 = document.createElement("div");
+              // 1. Forzamos a que sea una fila horizontal que ocupe todo el ancho
+              containerFila1.style.display = "flex";
+              containerFila1.style.width = "100%";
+              containerFila1.style.alignItems = "center";
+              containerFila1.style.marginBottom = "10px";
+              containerFila1.style.padding = "0";
+
+              const posi = document.createElement("div");
+              const nombre = document.createElement("div");
+              const puntos = document.createElement("div");
+
+              // posi.style.minWidth = "30px" // Ancho fijo para que todos los números queden alineados
+              posi.style.fontWeight = "bold";
+              posi.style.backgroundColor = "#292929"
+              posi.style.borderRadius = "10px";
+              posi.style.width = "18%";
+              posi.style.height = "50px";
+              posi.style.display = "flex";
+              posi.style.alignItems = "center";   // Centrado vertical
+              posi.style.justifyContent = "center"; // Centrado horizontal
+              posi.innerHTML = `POS`;
+
+              nombre.style.flexGrow = "1";
+              nombre.style.textAlign = "left";
+              nombre.style.backgroundColor = "#292929"
+              nombre.style.borderRadius = "10px";
+              nombre.style.marginLeft = "5px";
+              nombre.style.paddingLeft = "15px";
+              nombre.style.height = "50px";
+              nombre.style.display = "flex";
+              nombre.style.alignItems = "center";
+              nombre.style.fontWeight = "bold";
+              nombre.innerHTML = "EQUIPO";
+
+              puntos.style.width = "18%";
+              puntos.style.fontWeight = "bold";
+              puntos.style.backgroundColor = "#292929"
+              puntos.style.borderRadius = "10px";
+              puntos.style.height = "50px";
+              puntos.style.display = "flex";
+              puntos.style.alignItems = "center";   // Centrado vertical
+              puntos.style.justifyContent = "center"; // Centrado horizontal
+              puntos.style.marginLeft = "5px";
+              puntos.innerHTML = `PTS`;
+
+              containerFila1.appendChild(posi);
+              containerFila1.appendChild(nombre);
+              containerFila1.appendChild(puntos);
+
+              containerClasificacion.appendChild(containerFila1);
+
+              let posicion = 1;
+
+              tablaData.forEach(element => {
+                const containerFila = document.createElement("div");
+                // 1. Forzamos a que sea una fila horizontal que ocupe todo el ancho
+                containerFila.style.display = "flex";
+                containerFila.style.width = "100%";
+                containerFila.style.alignItems = "center";
+                containerFila.style.marginBottom = "10px";
+                containerFila.style.padding = "0"; 
+                // containerFila.style.backgroundColor = "#333333";
+                
+                // Opcional: añade tu clase para que tenga el fondo gris que usas en otros lados
+                containerFila.className = "partido"; 
+
+                const pos = document.createElement("div");
+                // pos.style.minWidth = "fit-content"
+                pos.style.fontWeight = "bold";
+                pos.style.backgroundColor = "#333333"
+                pos.style.borderRadius = "10px";
+                pos.style.width = "18%";
+                pos.style.height = "50px";
+                pos.style.display = "flex";
+                pos.style.alignItems = "center";   // Centrado vertical
+                pos.style.justifyContent = "center"; // Centrado horizontal
+                pos.innerHTML = `${posicion++}`;
+                if (element.nombre == "S.D. Eibar B" || element.nombre == "C.D. Derio") {
+                  pos.classList.add("verde");
+                }
+                if (teamName == "SD Eibar B") {
+                  if (posicion > 14) {
+                    pos.style.backgroundColor = "#552222";
+                  } else if (posicion < 3) {
+                    pos.style.backgroundColor = "#113311";
+                  } else if (posicion < 7) {
+                    pos.style.backgroundColor = "#448844";
+                  } else if (posicion > 13) {
+                    pos.style.backgroundColor = "#CCAA55";
+                  }
+                } else if (teamName == "CD Derio") {
+                  if (posicion > 16) {
+                    pos.style.backgroundColor = "#552222";
+                  } else if (posicion < 3) {
+                    pos.style.backgroundColor = "#113311";
+                  } else if (posicion < 7) {
+                    pos.style.backgroundColor = "#448844";
+                  }
+                }
+                containerFila.appendChild(pos);
+
+                const nombreEq = document.createElement("div");
+                // 2. Usamos flex-grow para que el nombre ocupe el espacio restante
+                nombreEq.style.flexGrow = "1";
+                nombreEq.style.textAlign = "left";
+                nombreEq.style.backgroundColor = "#333333"
+                nombreEq.style.borderRadius = "10px";
+                nombreEq.style.marginLeft = "5px";
+                nombreEq.style.paddingLeft = "15px";
+                nombreEq.style.height = "50px";
+                nombreEq.style.display = "flex";
+                nombreEq.style.alignItems = "center";   // Centrado vertical
+                
+                const nombreLimpio = element.nombre.replace(/"/g, '').replace(".", "").replace(".", "").replace(".", "").trim();
+                nombreEq.innerHTML = nombreLimpio;
+                if (element.nombre == "S.D. Eibar B" || element.nombre == "C.D. Derio") {
+                  nombreEq.classList.add("verde");
+                }
+                containerFila.appendChild(nombreEq);
+
+                const puntos = document.createElement("div");
+                let pts = parseInt(element.Empatados) + parseInt((element.Ganados * 3));
+                puntos.innerHTML = `${pts}`;
+                puntos.style.width = "18%";
+                puntos.style.fontWeight = "bold";
+                puntos.style.backgroundColor = "#333333"
+                puntos.style.borderRadius = "10px";
+                puntos.style.height = "50px";
+                puntos.style.display = "flex";
+                puntos.style.alignItems = "center";   // Centrado vertical
+                puntos.style.justifyContent = "center"; // Centrado horizontal
+                puntos.style.marginLeft = "5px";
+                if (element.nombre == "S.D. Eibar B" || element.nombre == "C.D. Derio") {
+                  puntos.classList.add("verde");
+                }
+
+                if (teamName == "SD Eibar B") {
+                    if (posicion > 14) {
+                      puntos.style.backgroundColor = "#552222";
+                    } else if (posicion < 3) {
+                      puntos.style.backgroundColor = "#113311";
+                    } else if (posicion < 7) {
+                      puntos.style.backgroundColor = "#448844";
+                    } else if (posicion > 13) {
+                      puntos.style.backgroundColor = "#CCAA55";
+                    }
+                  } else if (teamName == "CD Derio") {
+                    if (posicion > 16) {
+                      puntos.style.backgroundColor = "#552222";
+                    } else if (posicion < 3) {
+                      puntos.style.backgroundColor = "#113311";
+                    } else if (posicion < 7) {
+                      puntos.style.backgroundColor = "#448844";
+                    }
+                  }
+
+                if (teamName == "SD Eibar B") {
+                    if (posicion > 14) {
+                    nombreEq.style.backgroundColor = "#552222";
+                  } else if (posicion < 3) {
+                    nombreEq.style.backgroundColor = "#113311";
+                  } else if (posicion < 7) {
+                    nombreEq.style.backgroundColor = "#448844";
+                  } else if (posicion > 13) {
+                    nombreEq.style.backgroundColor = "#CCAA55";
+                  }
+                } else if (teamName == "CD Derio") {
+                  if (posicion > 16) {
+                    nombreEq.style.backgroundColor = "#552222";
+                  } else if (posicion < 3) {
+                    nombreEq.style.backgroundColor = "#113311";
+                  } else if (posicion < 7) {
+                    nombreEq.style.backgroundColor = "#448844";
+                  }
+                }
+
+                containerFila.appendChild(puntos);
+
+                containerFila.addEventListener("click", () => {
+                  const pj = element.Jugados;
+      
+                  const pg = parseInt(element.Ganados);
+                  const pe = parseInt(element.Empatados);
+                  const pp = parseInt(element.Perdidos);
+
+                  // Verificamos si ya estamos mostrando las estadísticas buscando un ID o clase específica
+                  const yaExpandido = nombreEq.querySelector(".stats-container");
+
+                  if (yaExpandido) {
+                      // Si ya está expandido, volvemos al estado original
+                      nombreEq.style.flexGrow = "1";
+                      nombreEq.style.textAlign = "left";
+                      nombreEq.style.backgroundColor = cargarColorPref(pos.innerText, teamName);
+                      nombreEq.style.borderRadius = "10px";
+                      nombreEq.style.marginLeft = "5px";
+                      nombreEq.style.paddingLeft = "15px";
+                      nombreEq.style.height = "50px";
+                      nombreEq.style.display = "flex";
+                      nombreEq.style.alignItems = "center"; 
+                      nombreEq.style.flexDirection = "row";
+                      
+                      pos.style.height = "50px";
+                      puntos.style.height = "50px";
+                      nombreEq.innerHTML = element.nombre.replace(/"/g, '').replace(".", "").replace(".", "").replace(".", "").trim();
+                  } else {
+                      // Aumentamos la altura para que quepan las 3 líneas (Nombre + PJ + G/E/P)
+                      nombreEq.style.height = "auto"; 
+                      nombreEq.style.paddingTop = "10px";
+                      nombreEq.style.paddingBottom = "10px";
+                      nombreEq.style.paddingRight = "15px";
+
+                      nombreEq.style.display = "flex";
+                      nombreEq.style.flexDirection = "column";
+
+                      nombreEq.innerHTML = `
+                          <span style="font-size: 1rem; font-weight: bold; margin-bottom: 12px; color: ${element.nombre === "S.D. Eibar B" || element.nombre === "C.D. Derio" ? "#00ff88" : "white"}; width: 100%; text-align: left; text-decoration: underline;">
+                              ${element.nombre.replace(/"/g, '').replace(".", "").replace(".", "").replace(".", "").trim()}
+                          </span>
+
+                          <div style="position: relative; width: 100%; padding: 15px 10px 10px 10px; border: 2px solid ${element.nombre === "S.D. Eibar B" || element.nombre === "C.D. Derio" ? "#00ff88" : "white"}; border-radius: 8px; margin-top: 5px;">
+                              
+                              <span style="position: absolute; top: -10px; left: 10px; background-color: ${cargarColorPref(pos.innerText, teamName)}; padding: 0 5px; font-size: 0.8rem; color: ${element.nombre === "S.D. Eibar B" || element.nombre === "C.D. Derio" ? "#00ff88" : "white"};">
+                                  <strong>Jugados: </strong><i>${pj}</i>
+                              </span>
+                              
+                              <div class="stats-container" style="display: flex; flex-direction: column; gap: 8px;">
+                                  <div style="display: flex; width: 100%; font-size: 0.75rem; color: ${element.nombre === "S.D. Eibar B" || element.nombre === "C.D. Derio" ? "#00ff88" : "white"};">
+                                      <span style="flex: 1;"><strong>G:</strong> <i>${pg}</i></span>
+                                      <span style="flex: 1; text-align: center;"><strong>E:</strong> <i>${pe}</i></span>
+                                      <span style="flex: 1; text-align: right;"><strong>P:</strong> <i>${pp}</i></span>
+                                  </div>
+
+                                  <div style="display: flex; width: 100%; font-size: 0.75rem; color: ${element.nombre === "S.D. Eibar B" || element.nombre === "C.D. Derio" ? "#00ff88" : "white"}; border-top: 2px solid ${element.nombre === "S.D. Eibar B" || element.nombre === "C.D. Derio" ? "#00ff88" : "white"}; pt: 5px; margin-top: 2px; padding-top: 5px;">
+                                      <span style="flex: 1;"><strong>GF:</strong> <i>${element.GolesFavor}</i></span>
+                                      <span style="flex: 1; text-align: right;"><strong>GC:</strong> <i>${element.GolesContra}</i></span>
+                                  </div>
+                              </div>
+                          </div>
+                      `;
+
+                      pos.style.height = nombreEq.scrollHeight + "px";
+                      puntos.style.height = nombreEq.scrollHeight + "px";
+                  }
+                });
+
+                containerClasificacion.appendChild(containerFila);
+            });
+            }
+          } catch (error) {
+            // Salta el bloque de clasificación si hay error
+          }
 
         } else if (teamName == "FC Cartagena") {
           // --- 2. Bloque Último Partido ---
@@ -339,18 +610,249 @@
             `;
             teamContainer.appendChild(nextDetails);
           }
+          
+          try {
+            const refClas = doc(db, "seguimiento_futbol", `clasificacion_fc_cartagena`);
+            const snapClas = await getDoc(refClas);
 
-          const nextTitle = document.createElement("div");
-          nextTitle.className = "titleInfo";
-          nextTitle.innerHTML = `<h3>CLASIFICACIÓN</h3>`;
-          teamContainer.appendChild(nextTitle);
+            if (snapClas.exists()) {
+              const data = snapClas.data();
+              const tablaData = data.tabla;
+              const nextTitle = document.createElement("div");
+              nextTitle.className = "titleInfo";
+              nextTitle.innerHTML = `<h3>CLASIFICACIÓN</h3>`;
+              teamContainer.appendChild(nextTitle);
+
+              const containerClasificacion = document.createElement("div");
+              containerClasificacion.style.padding = "10px";
+              containerClasificacion.style.borderRadius = "10px";
+              containerClasificacion.style.backgroundColor = "#444444";
+              teamContainer.appendChild(containerClasificacion);
+
+              const containerFila1 = document.createElement("div");
+              // 1. Forzamos a que sea una fila horizontal que ocupe todo el ancho
+              containerFila1.style.display = "flex";
+              containerFila1.style.width = "100%";
+              containerFila1.style.alignItems = "center";
+              containerFila1.style.marginBottom = "10px";
+              containerFila1.style.padding = "0";
+
+              const posi = document.createElement("div");
+              const nombre = document.createElement("div");
+              const puntos = document.createElement("div");
+
+              // posi.style.minWidth = "30px" // Ancho fijo para que todos los números queden alineados
+              posi.style.fontWeight = "bold";
+              posi.style.backgroundColor = "#292929"
+              posi.style.borderRadius = "10px";
+              posi.style.width = "18%";
+              posi.style.height = "50px";
+              posi.style.display = "flex";
+              posi.style.alignItems = "center";   // Centrado vertical
+              posi.style.justifyContent = "center"; // Centrado horizontal
+              posi.innerHTML = `POS`;
+
+              nombre.style.flexGrow = "1";
+              nombre.style.textAlign = "left";
+              nombre.style.backgroundColor = "#292929"
+              nombre.style.borderRadius = "10px";
+              nombre.style.marginLeft = "5px";
+              nombre.style.paddingLeft = "15px";
+              nombre.style.height = "50px";
+              nombre.style.display = "flex";
+              nombre.style.alignItems = "center";
+              nombre.style.fontWeight = "bold";
+              nombre.innerHTML = "EQUIPO";
+
+              puntos.style.width = "18%";
+              puntos.style.fontWeight = "bold";
+              puntos.style.backgroundColor = "#292929"
+              puntos.style.borderRadius = "10px";
+              puntos.style.height = "50px";
+              puntos.style.display = "flex";
+              puntos.style.alignItems = "center";   // Centrado vertical
+              puntos.style.justifyContent = "center"; // Centrado horizontal
+              puntos.style.marginLeft = "5px";
+              puntos.innerHTML = `PTS`;
+
+              containerFila1.appendChild(posi);
+              containerFila1.appendChild(nombre);
+              containerFila1.appendChild(puntos);
+
+              containerClasificacion.appendChild(containerFila1);
+
+              let posicion = 1;
+
+              tablaData.forEach(element => {
+                const containerFila = document.createElement("div");
+                // 1. Forzamos a que sea una fila horizontal que ocupe todo el ancho
+                containerFila.style.display = "flex";
+                containerFila.style.width = "100%";
+                containerFila.style.alignItems = "center";
+                containerFila.style.marginBottom = "10px";
+                containerFila.style.padding = "0"; 
+                // containerFila.style.backgroundColor = "#333333";
+                
+                // Opcional: añade tu clase para que tenga el fondo gris que usas en otros lados
+                containerFila.className = "partido"; 
+
+                const pos = document.createElement("div");
+                // pos.style.minWidth = "fit-content"
+                pos.style.fontWeight = "bold";
+                pos.style.backgroundColor = "#333333"
+                pos.style.borderRadius = "10px";
+                pos.style.width = "18%";
+                pos.style.height = "50px";
+                pos.style.display = "flex";
+                pos.style.alignItems = "center";   // Centrado vertical
+                pos.style.justifyContent = "center"; // Centrado horizontal
+                pos.innerHTML = `${posicion++}`;
+                if (element.nombre == "F.C. Cartagena") {
+                  pos.classList.add("verde");
+                }
+                if (posicion > 16) {
+                  pos.style.backgroundColor = "#552222";
+                } else if (posicion < 3) {
+                  pos.style.backgroundColor = "#113311";
+                } else if (posicion < 7) {
+                  pos.style.backgroundColor = "#448844";
+                }
+                containerFila.appendChild(pos);
+
+                const nombreEq = document.createElement("div");
+                // 2. Usamos flex-grow para que el nombre ocupe el espacio restante
+                nombreEq.style.flexGrow = "1";
+                nombreEq.style.textAlign = "left";
+                nombreEq.style.backgroundColor = "#333333"
+                nombreEq.style.borderRadius = "10px";
+                nombreEq.style.marginLeft = "5px";
+                nombreEq.style.paddingLeft = "15px";
+                nombreEq.style.height = "50px";
+                nombreEq.style.display = "flex";
+                nombreEq.style.alignItems = "center";   // Centrado vertical
+                
+                const nombreLimpio = element.nombre.replace(/"/g, '').replace(".", "").replace(".", "").replace(".", "").replace(".", "").trim();
+                nombreEq.innerHTML = nombreLimpio;
+                if (element.nombre == "F.C. Cartagena") {
+                  nombreEq.classList.add("verde");
+                }
+                containerFila.appendChild(nombreEq);
+
+                const puntos = document.createElement("div");
+                let pts = parseInt(element.Empatados) + parseInt((element.Ganados * 3));
+                puntos.innerHTML = `${pts}`;
+                puntos.style.width = "18%";
+                puntos.style.fontWeight = "bold";
+                puntos.style.backgroundColor = "#333333"
+                puntos.style.borderRadius = "10px";
+                puntos.style.height = "50px";
+                puntos.style.display = "flex";
+                puntos.style.alignItems = "center";   // Centrado vertical
+                puntos.style.justifyContent = "center"; // Centrado horizontal
+                puntos.style.marginLeft = "5px";
+                if (element.nombre == "F.C. Cartagena") {
+                  puntos.classList.add("verde");
+                }
+                if (posicion > 16) {
+                  puntos.style.backgroundColor = "#552222";
+                } else if (posicion < 3) {
+                  puntos.style.backgroundColor = "#113311";
+                } else if (posicion < 7) {
+                  puntos.style.backgroundColor = "#448844";
+                }
+
+                if (posicion > 16) {
+                  nombreEq.style.backgroundColor = "#552222";
+                } else if (posicion < 3) {
+                  nombreEq.style.backgroundColor = "#113311";
+                } else if (posicion < 7) {
+                  nombreEq.style.backgroundColor = "#448844";
+                }
+
+                containerFila.appendChild(puntos);
+
+                containerFila.addEventListener("click", () => {
+                  const pj = element.Jugados;
+      
+                  const pg = parseInt(element.Ganados);
+                  const pe = parseInt(element.Empatados);
+                  const pp = parseInt(element.Perdidos);
+
+                  // Verificamos si ya estamos mostrando las estadísticas buscando un ID o clase específica
+                  const yaExpandido = nombreEq.querySelector(".stats-container");
+
+                  if (yaExpandido) {
+                      // Si ya está expandido, volvemos al estado original
+                      nombreEq.style.flexGrow = "1";
+                      nombreEq.style.textAlign = "left";
+                      nombreEq.style.backgroundColor = cargarColorCart(pos.innerText);
+                      nombreEq.style.borderRadius = "10px";
+                      nombreEq.style.marginLeft = "5px";
+                      nombreEq.style.paddingLeft = "15px";
+                      nombreEq.style.height = "50px";
+                      nombreEq.style.display = "flex";
+                      nombreEq.style.alignItems = "center"; 
+                      nombreEq.style.flexDirection = "row";
+                      
+                      pos.style.height = "50px";
+                      puntos.style.height = "50px";
+                      nombreEq.innerHTML = element.nombre.replace(/"/g, '').replace(".", "").replace(".", "").replace(".", "").trim();
+                  } else {
+                      // Aumentamos la altura para que quepan las 3 líneas (Nombre + PJ + G/E/P)
+                      nombreEq.style.height = "auto"; 
+                      nombreEq.style.paddingTop = "10px";
+                      nombreEq.style.paddingBottom = "10px";
+                      nombreEq.style.paddingRight = "15px";
+
+                      nombreEq.style.display = "flex";
+                      nombreEq.style.flexDirection = "column";
+
+                      nombreEq.innerHTML = `
+                          <span style="font-size: 1rem; font-weight: bold; margin-bottom: 12px; color: ${element.nombre === "F.C. Cartagena" ? "#00ff88" : "white"}; width: 100%; text-align: left; text-decoration: underline;">
+                              ${element.nombre.replace(/"/g, '').replace(".", "").replace(".", "").replace(".", "").trim()}
+                          </span>
+
+                          <div style="position: relative; width: 100%; padding: 15px 10px 10px 10px; border: 2px solid ${element.nombre === "F.C. Cartagena" ? "#00ff88" : "white"}; border-radius: 8px; margin-top: 5px;">
+                              
+                              <span style="position: absolute; top: -10px; left: 10px; background-color: ${cargarColorCart(pos.innerText)}; padding: 0 5px; font-size: 0.8rem; color: ${element.nombre === "F.C. Cartagena" ? "#00ff88" : "white"};">
+                                  <strong>Jugados: </strong><i>${pj}</i>
+                              </span>
+                              
+                              <div class="stats-container" style="display: flex; flex-direction: column; gap: 8px;">
+                                  <div style="display: flex; width: 100%; font-size: 0.75rem; color: ${element.nombre === "F.C. Cartagena" ? "#00ff88" : "white"};">
+                                      <span style="flex: 1;"><strong>G:</strong> <i>${pg}</i></span>
+                                      <span style="flex: 1; text-align: center;"><strong>E:</strong> <i>${pe}</i></span>
+                                      <span style="flex: 1; text-align: right;"><strong>P:</strong> <i>${pp}</i></span>
+                                  </div>
+
+                                  <div style="display: flex; width: 100%; font-size: 0.75rem; color: ${element.nombre === "F.C. Cartagena" ? "#00ff88" : "white"}; border-top: 2px solid ${element.nombre === "F.C. Cartagena" ? "#00ff88" : "white"}; pt: 5px; margin-top: 2px; padding-top: 5px;">
+                                      <span style="flex: 1;"><strong>GF:</strong> <i>${element.GolesFavor}</i></span>
+                                      <span style="flex: 1; text-align: right;"><strong>GC:</strong> <i>${element.GolesContra}</i></span>
+                                  </div>
+                              </div>
+                          </div>
+                      `;
+
+                      pos.style.height = nombreEq.scrollHeight + "px";
+                      puntos.style.height = nombreEq.scrollHeight + "px";
+                  }
+                });
+
+                containerClasificacion.appendChild(containerFila);
+            });
+            }
+          } catch (error) {
+            // Salta el bloque de clasificación si hay error
+          }
+
+
         } else {
           // --- 2. Bloque Último Partido ---
         if (ultimo) {
           const lastTitle = document.createElement("div");
           lastTitle.className = "titleInfo";
 
-          var jornadaLimpia = ultimo.infoJornada.split(' ')[0] + ultimo.infoJornada.split(' ')[1]
+          var jornadaLimpia = ultimo.infoJornada.split(' ')[0] + " " + ultimo.infoJornada.split(' ')[1]
 
           /* var fecha = ultimo.infoJornada.split(' ')[0].replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/, (match, d, m, y) => {
               const dia = d.padStart(2, '0');
@@ -387,7 +889,7 @@
           const nextTitle = document.createElement("div");
           nextTitle.className = "titleInfo";
 
-          var jornadaLimpia = proximo.infoJornada.split(' ')[0] + proximo.infoJornada.split(' ')[1]
+          var jornadaLimpia = proximo.infoJornada.split(' ')[0] + " " + proximo.infoJornada.split(' ')[1]
 
           var fecha = proximo.resultado.split(' ')[0].replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/, (match, d, m, y) => {
               const dia = d.padStart(2, '0');
@@ -647,6 +1149,141 @@
           // Salta el bloque de clasificación si hay error
         }
       }
+
+      const nextTitle = document.createElement("div");
+      nextTitle.style.display = "flex";
+
+      const mediaQuery = window.matchMedia("(min-width: 600px)");
+
+      function handleTabletChange(e) {
+        if (e.matches) {
+          // Pantalla ancha
+          nextTitle.style.flexDirection = "row";
+        } else {
+          // Pantalla estrecha
+          nextTitle.style.flexDirection = "column";
+        }
+      }
+
+      // Escuchar cambios de tamaño
+      mediaQuery.addListener(handleTabletChange);
+
+      // Ejecutar al inicio
+      handleTabletChange(mediaQuery);
+
+      const containerAscensoDirecto = document.createElement("div");
+      containerAscensoDirecto.style.width = "auto";
+      containerAscensoDirecto.style.marginRight = "15px";
+      containerAscensoDirecto.style.marginBottom = "8px";
+
+      const containerAscensoPlayOff = document.createElement("div");
+      containerAscensoPlayOff.style.width = "auto";
+      containerAscensoPlayOff.style.marginRight = "15px";
+      const containerDescensoPlayOff = document.createElement("div");
+      containerDescensoPlayOff.style.width = "auto";
+      containerDescensoPlayOff.style.marginRight = "15px";
+      const containerDescenso = document.createElement("div");
+      containerDescenso.style.width = "auto";
+
+      // 1. Configurar el contenedor como Flexbox
+      containerAscensoDirecto.style.display = "flex";
+      containerAscensoDirecto.style.alignItems = "center"; // Centra verticalmente el cuadradito con el texto
+      containerAscensoDirecto.style.gap = "8px"; // Añade una separación entre el cuadro y el texto
+
+      // 2. El cuadrado de color
+      const divAscensoDirecto = document.createElement("div");
+      divAscensoDirecto.style.backgroundColor = "#113311";
+      divAscensoDirecto.style.width = "20px";
+      divAscensoDirecto.style.height = "20px";
+      divAscensoDirecto.style.borderRadius = "5px";
+      // Evitar que el flex lo encoja si el texto es muy largo
+      divAscensoDirecto.style.flexShrink = "0"; 
+
+      containerAscensoDirecto.appendChild(divAscensoDirecto);
+
+      // 3. El texto
+      const p = document.createElement("p");
+      p.innerText = "Ascenso";
+      // Quitamos los márgenes por defecto del <p> para que no rompa la alineación
+      p.style.margin = "0";
+      p.style.fontWeight = "bold"; 
+
+      containerAscensoDirecto.appendChild(p);
+
+      // 4. Añadir al título
+      nextTitle.appendChild(containerAscensoDirecto);
+
+      // --- Bloque Ascenso PlayOff ---
+      containerAscensoPlayOff.style.display = "flex";
+      containerAscensoPlayOff.style.alignItems = "center";
+      containerAscensoPlayOff.style.gap = "8px";
+      containerAscensoPlayOff.style.marginBottom = "8px";
+
+      const divAscensoPlayOff = document.createElement("div");
+      divAscensoPlayOff.style.backgroundColor = "#448844";
+      divAscensoPlayOff.style.width = "20px";
+      divAscensoPlayOff.style.height = "20px";
+      divAscensoPlayOff.style.borderRadius = "5px";
+      divAscensoPlayOff.style.flexShrink = "0";
+
+      const pPlayOff = document.createElement("p");
+      pPlayOff.innerText = "PlayOff de Ascenso";
+      pPlayOff.style.margin = "0";
+      pPlayOff.style.fontWeight = "bold"; 
+
+
+      containerAscensoPlayOff.appendChild(divAscensoPlayOff);
+      containerAscensoPlayOff.appendChild(pPlayOff);
+      nextTitle.appendChild(containerAscensoPlayOff);
+
+
+      // --- Bloque Descenso PlayOff ---
+      containerDescensoPlayOff.style.display = "flex";
+      containerDescensoPlayOff.style.alignItems = "center";
+      containerDescensoPlayOff.style.gap = "8px";
+      containerDescensoPlayOff.style.marginBottom = "8px";
+
+      const divDescensoPlayOff = document.createElement("div");
+      divDescensoPlayOff.style.backgroundColor = "#CCAA55";
+      divDescensoPlayOff.style.width = "20px";
+      divDescensoPlayOff.style.height = "20px";
+      divDescensoPlayOff.style.borderRadius = "5px";
+      divDescensoPlayOff.style.flexShrink = "0";
+
+      const pDescensoPO = document.createElement("p");
+      pDescensoPO.innerText = "PlayOff de Descenso";
+      pDescensoPO.style.margin = "0";
+      pDescensoPO.style.fontWeight = "bold"; 
+
+      containerDescensoPlayOff.appendChild(divDescensoPlayOff);
+      containerDescensoPlayOff.appendChild(pDescensoPO);
+      nextTitle.appendChild(containerDescensoPlayOff);
+
+
+      // --- Bloque Descenso Directo ---
+      containerDescenso.style.display = "flex";
+      containerDescenso.style.alignItems = "center";
+      containerDescenso.style.gap = "8px";
+      containerDescenso.style.marginBottom = "8px";
+
+      const divDescenso = document.createElement("div");
+      divDescenso.style.backgroundColor = "#552222";
+      divDescenso.style.width = "20px";
+      divDescenso.style.height = "20px";
+      divDescenso.style.borderRadius = "5px";
+      divDescenso.style.flexShrink = "0";
+
+      const pDescenso = document.createElement("p");
+      pDescenso.innerText = "Descenso";
+      pDescenso.style.margin = "0";
+      pDescenso.style.fontWeight = "bold"; 
+
+      containerDescenso.appendChild(divDescenso);
+      containerDescenso.appendChild(pDescenso);
+      nextTitle.appendChild(containerDescenso);
+
+      teamContainer.appendChild(nextTitle);
+
       } else {
         teamContainer.innerHTML = `<p>No se encontraron estadísticas para este equipo.</p>`;
       }
@@ -676,6 +1313,44 @@
       return "#113311";
     } else {
       return "#333333";
+    }
+  }
+
+  function cargarColorCart(posicion) {
+    if (posicion >= 16) {
+      return "#552222";
+    } else if (posicion <= 1) {
+      return "#113311";
+    } else if (posicion <= 5) {
+      return "#448844"
+    } else {
+      return "#333333";
+    }
+  }
+
+  function cargarColorPref(posicion, equipo) {
+    if (equipo == "SD Eibar B") {
+      if (posicion >= 14) {
+        return "#552222";
+      } else if (posicion <= 1) {
+        return "#113311";
+      } else if (posicion == 13) {
+        return "#CCAA55"
+      } else if (posicion <= 5) {
+        return "#448844"
+      } else {
+        return "#333333";
+      }
+    } else if (equipo == "CD Derio") {
+      if (posicion >= 16) {
+        return "#552222";
+      } else if (posicion <= 1) {
+        return "#113311";
+      } else if (posicion <= 5) {
+        return "#448844"
+      } else {
+        return "#333333";
+      }
     }
   }
 

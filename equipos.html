@@ -5,14 +5,66 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="DB Football">
-  <link rel="manifest" href="/db-futbol/manifest.json">
+  <meta name="apple-mobile-web-app-title" content="PP Football">
 
-  <!-- Icono que se verá en la pantalla de inicio -->
   <link rel="apple-touch-icon" href="icono.png">
   <title>Equipos</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
+    :root {
+      --primary-color: #00ff88;
+      --background-color: #0a0a0a;
+      --text-color: #f5f5f5;
+    }
+
+    /* Estilos del Overlay de Carga */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      display: none; 
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 9999;
+      background: var(--background-color);
+    }
+
+    .spinner {
+      width: 60px;
+      height: 60px;
+      border: 6px solid #444;
+      border-top: 6px solid var(--primary-color);
+      border-radius: 50%;
+      animation: girar 1s linear infinite;
+    }
+    @keyframes girar { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .progress-bar {
+      width: 300px;
+      max-width: 90vw;
+      height: 12px;
+      border-radius: 999px;
+      background: #2b2b2b;
+      overflow: hidden;
+    }
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary-color), #66ffad 80%);
+      transition: width 0.1s linear;
+    }
+    .percent {
+      color: var(--text-color);
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    .menu a.disabled {
+      pointer-events: none;
+      opacity: 0.45;
+    }
+
     .content {
       display: flex;
       flex-wrap: wrap;
@@ -45,19 +97,26 @@
 </head>
 <body>
   <header class="navbar">
-    <h1 class="logo">DB Football 2025/26</h1>
+    <h1 class="logo">PP Football 2025/26</h1>
     <nav class="menu">
       <a href="index.html">Inicio</a>
       <a href="equipos.html">Equipos</a>
     </nav>
   </header>
 
-  <div class="content">
-    <!-- Aquí aparecerán los equipos -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="percent" id="percentText">0%</div>
   </div>
 
+  <div class="content">
+    </div>
+
   <footer class="footer">
-    <p>© 2025 DB Football. Todos los derechos reservados.</p>
+    <p>© 2025 PP Football. Todos los derechos reservados.</p>
   </footer>
 
   <script type="module">
@@ -68,32 +127,63 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    const loadingOverlay = document.getElementById("loadingOverlay");
+    const progressFill = document.getElementById("progressFill");
+    const percentText = document.getElementById("percentText");
+    const menuLinks = document.querySelectorAll(".menu a");
+
+    function actualizarProgreso(valor) {
+      progressFill.style.width = valor + "%";
+      percentText.textContent = valor + "%";
+    }
+
     async function cargarEquipos() {
       const contenedor = document.querySelector('.content');
       contenedor.innerHTML = "";
+      
+      try {
+        actualizarProgreso(20);
+        const querySnapshot = await getDocs(collection(db, "Equipos"));
+        actualizarProgreso(70);
 
-      // Si los datos de los equipos están también en localStorage (magicEquipos)
-      const magicEquipos = JSON.parse(localStorage.getItem("magicEquipos"))?.matches || [];
+        querySnapshot.forEach((doc) => {
+          const equipo = doc.data();
+          const nombreEquipo = equipo.nombre;
 
-      const querySnapshot = await getDocs(collection(db, "Equipos"));
-      querySnapshot.forEach((doc) => {
-        const equipo = doc.data();
-        const nombreEquipo = equipo.nombre;
+          const teamDiv = document.createElement('div');
+          teamDiv.classList.add('team-card');
+          teamDiv.innerHTML = `<h3>${nombreEquipo}</h3>`;
 
-        const teamDiv = document.createElement('div');
-        teamDiv.classList.add('team-card');
-        teamDiv.innerHTML = `<h3>${nombreEquipo}</h3>`;
+          teamDiv.addEventListener("click", () => {
+            window.location.href = `equipo.html?team=${encodeURIComponent(nombreEquipo)}`;
+          });
 
-        // Evento para ir a equipo.html con el nombre del equipo
-        teamDiv.addEventListener("click", () => {
-          window.location.href = `equipo.html?team=${encodeURIComponent(nombreEquipo)}`;
+          contenedor.appendChild(teamDiv);
         });
-
-        contenedor.appendChild(teamDiv);
-      });
+        
+        actualizarProgreso(100);
+      } catch (error) {
+        console.error("Error cargando equipos:", error);
+        contenedor.innerHTML = "<p style='color:red;'>Error al conectar con Firebase.</p>";
+      }
     }
 
-    cargarEquipos();
+    // Flujo de carga al entrar
+    window.addEventListener("DOMContentLoaded", async () => {
+      // Mostrar overlay y bloquear menú
+      loadingOverlay.style.display = "flex";
+      menuLinks.forEach(a => a.classList.add("disabled"));
+      actualizarProgreso(5);
+
+      // Cargar datos
+      await cargarEquipos();
+
+      // Pequeña espera para que se vea el 100%
+      setTimeout(() => {
+        loadingOverlay.style.display = "none";
+        menuLinks.forEach(a => a.classList.remove("disabled"));
+      }, 300);
+    });
   </script>
 </body>
 </html>
