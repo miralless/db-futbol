@@ -1155,22 +1155,6 @@
 
       const mediaQuery = window.matchMedia("(min-width: 600px)");
 
-      function handleTabletChange(e) {
-        if (e.matches) {
-          // Pantalla ancha
-          nextTitle.style.flexDirection = "row";
-        } else {
-          // Pantalla estrecha
-          nextTitle.style.flexDirection = "column";
-        }
-      }
-
-      // Escuchar cambios de tamaño
-      mediaQuery.addListener(handleTabletChange);
-
-      // Ejecutar al inicio
-      handleTabletChange(mediaQuery);
-
       const containerAscensoDirecto = document.createElement("div");
       containerAscensoDirecto.style.width = "auto";
       containerAscensoDirecto.style.marginRight = "15px";
@@ -1193,8 +1177,8 @@
       // 2. El cuadrado de color
       const divAscensoDirecto = document.createElement("div");
       divAscensoDirecto.style.backgroundColor = "#113311";
-      divAscensoDirecto.style.width = "20px";
-      divAscensoDirecto.style.height = "20px";
+      divAscensoDirecto.style.width = "18px";
+      divAscensoDirecto.style.height = "18px";
       divAscensoDirecto.style.borderRadius = "5px";
       // Evitar que el flex lo encoja si el texto es muy largo
       divAscensoDirecto.style.flexShrink = "0"; 
@@ -1207,6 +1191,7 @@
       // Quitamos los márgenes por defecto del <p> para que no rompa la alineación
       p.style.margin = "0";
       p.style.fontWeight = "bold"; 
+      p.style.fontSize = "12px";
 
       containerAscensoDirecto.appendChild(p);
 
@@ -1218,11 +1203,12 @@
       containerAscensoPlayOff.style.alignItems = "center";
       containerAscensoPlayOff.style.gap = "8px";
       containerAscensoPlayOff.style.marginBottom = "8px";
+      containerAscensoPlayOff.style.justifyContent = "flex-end";
 
       const divAscensoPlayOff = document.createElement("div");
       divAscensoPlayOff.style.backgroundColor = "#448844";
-      divAscensoPlayOff.style.width = "20px";
-      divAscensoPlayOff.style.height = "20px";
+      divAscensoPlayOff.style.width = "18px";
+      divAscensoPlayOff.style.height = "18px";
       divAscensoPlayOff.style.borderRadius = "5px";
       divAscensoPlayOff.style.flexShrink = "0";
 
@@ -1230,7 +1216,7 @@
       pPlayOff.innerText = "PlayOff de Ascenso";
       pPlayOff.style.margin = "0";
       pPlayOff.style.fontWeight = "bold"; 
-
+      pPlayOff.style.fontSize = "12px";
 
       containerAscensoPlayOff.appendChild(divAscensoPlayOff);
       containerAscensoPlayOff.appendChild(pPlayOff);
@@ -1245,8 +1231,8 @@
 
       const divDescensoPlayOff = document.createElement("div");
       divDescensoPlayOff.style.backgroundColor = "#CCAA55";
-      divDescensoPlayOff.style.width = "20px";
-      divDescensoPlayOff.style.height = "20px";
+      divDescensoPlayOff.style.width = "18px";
+      divDescensoPlayOff.style.height = "18px";
       divDescensoPlayOff.style.borderRadius = "5px";
       divDescensoPlayOff.style.flexShrink = "0";
 
@@ -1254,6 +1240,7 @@
       pDescensoPO.innerText = "PlayOff de Descenso";
       pDescensoPO.style.margin = "0";
       pDescensoPO.style.fontWeight = "bold"; 
+      pDescensoPO.style.fontSize = "12px";
 
       containerDescensoPlayOff.appendChild(divDescensoPlayOff);
       containerDescensoPlayOff.appendChild(pDescensoPO);
@@ -1265,11 +1252,12 @@
       containerDescenso.style.alignItems = "center";
       containerDescenso.style.gap = "8px";
       containerDescenso.style.marginBottom = "8px";
+      containerDescenso.style.justifyContent = "flex-end";
 
       const divDescenso = document.createElement("div");
       divDescenso.style.backgroundColor = "#552222";
-      divDescenso.style.width = "20px";
-      divDescenso.style.height = "20px";
+      divDescenso.style.width = "18px";
+      divDescenso.style.height = "18px";
       divDescenso.style.borderRadius = "5px";
       divDescenso.style.flexShrink = "0";
 
@@ -1277,12 +1265,73 @@
       pDescenso.innerText = "Descenso";
       pDescenso.style.margin = "0";
       pDescenso.style.fontWeight = "bold"; 
+      pDescenso.style.fontSize = "12px";
 
+      
       containerDescenso.appendChild(divDescenso);
       containerDescenso.appendChild(pDescenso);
       nextTitle.appendChild(containerDescenso);
 
       teamContainer.appendChild(nextTitle);
+
+      function handleTabletChange(e) {
+        // 1. Forzamos el contenedor padre a ocupar todo el ancho y permitir saltos de línea
+        nextTitle.style.display = "flex";
+        nextTitle.style.flexWrap = "wrap"; 
+        nextTitle.style.width = "100%"; // Crucial para que el wrap funcione
+
+        if (e.matches) {
+            // PANTALLA ANCHA: Todo en una fila
+            nextTitle.style.flexDirection = "row";
+
+            containerAscensoPlayOff.removeChild(pPlayOff);
+            containerDescenso.removeChild(pDescenso);
+
+            containerAscensoPlayOff.appendChild(pPlayOff);
+            containerDescenso.appendChild(pDescenso);
+            
+            [containerAscensoDirecto, containerAscensoPlayOff, containerDescensoPlayOff, containerDescenso].forEach(c => {
+                if(c) {
+                    c.style.flex = "0 1 auto"; 
+                    c.style.width = "auto";
+                    c.style.marginRight = "15px";
+                }
+            });
+        } else {
+            // MÓVIL: 2 por fila (Rejilla 2x2)
+            nextTitle.style.flexDirection = "row";
+
+            containerAscensoPlayOff.removeChild(divAscensoPlayOff);
+            containerDescenso.removeChild(divDescenso);
+
+            containerAscensoPlayOff.appendChild(divAscensoPlayOff);
+            containerDescenso.appendChild(divDescenso);
+            
+            [containerAscensoDirecto, containerAscensoPlayOff, containerDescensoPlayOff, containerDescenso].forEach(c => {
+                if(c) {
+                    // Forzamos el 50% exacto usando border-box
+                    c.style.boxSizing = "border-box";
+                    c.style.flex = "0 0 50%"; 
+                    c.style.width = "50%";
+                    
+                    // Quitamos el margin derecho que pusiste arriba para que no sume ancho extra
+                    c.style.marginRight = "0px";
+                    c.style.paddingRight = "5px"; // Usamos padding para separar sin romper el 50%
+                }
+            });
+        }
+      }
+
+      // Escuchar cambios de tamaño
+      mediaQuery.addListener(handleTabletChange);
+
+      // Ejecutar al inicio
+      handleTabletChange(mediaQuery);
+
+      const schedule = document.createElement("div");
+      schedule.className = "titleInfo";
+      schedule.innerHTML = `<h3>CALENDARIO</h3>`;
+      teamContainer.appendChild(schedule);
 
       } else {
         teamContainer.innerHTML = `<p>No se encontraron estadísticas para este equipo.</p>`;
