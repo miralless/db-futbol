@@ -922,7 +922,7 @@
           teamContainer.appendChild(nextDetails);
         }
 
-        cargacalendario();
+        cargaCalendario();
 
         try {
           const refClas = doc(db, "seguimiento_futbol", "clasificacion_indartsu");
@@ -1346,108 +1346,118 @@
   async function cargaCalendario() {
     const nombreParaCalendario = teamName == "FC Cartagena" ? "cartagena" : teamName == "SD Eibar B" ? "eibar_b" : teamName == "CD Derio" ? "derio" : "indartsu";
 
-      try {
-          const refClas = doc(db, "seguimiento_futbol", `lista_partidos_${nombreParaCalendario}`);
-          const snapClas = await getDoc(refClas);
+    try {
+        const refClas = doc(db, "seguimiento_futbol", `lista_partidos_${nombreParaCalendario}`);
+        const snapClas = await getDoc(refClas);
 
-          if (snapClas.exists()) {
-              const todosLosPartidos = snapClas.data().partidos || [];
-              const HOY = new Date();
-              let fechaActual = new Date(); 
+        if (snapClas.exists()) {
+            const todosLosPartidos = snapClas.data().partidos || [];
+            const HOY = new Date();
+            let fechaActual = new Date();
 
-              const schedule = document.createElement("div");
-              schedule.className = "titleInfo";
-              schedule.innerHTML = `<h3>CALENDARIO</h3>`;
-              teamContainer.appendChild(schedule);
+            const schedule = document.createElement("div");
+            schedule.className = "titleInfo";
+            schedule.innerHTML = `<h3>CALENDARIO</h3>`;
+            teamContainer.appendChild(schedule);
 
-              const containerCalendario = document.createElement("div");
-              containerCalendario.style.padding = "10px";
-              containerCalendario.style.borderRadius = "10px";
-              containerCalendario.style.backgroundColor = "#444444";
-              containerCalendario.style.color = "white";
-              containerCalendario.style.fontFamily = "sans-serif";
-              teamContainer.appendChild(containerCalendario);
+            const containerCalendario = document.createElement("div");
+            containerCalendario.style.padding = "10px";
+            containerCalendario.style.borderRadius = "10px";
+            containerCalendario.style.backgroundColor = "#444444";
+            containerCalendario.style.color = "white";
+            containerCalendario.style.fontFamily = "sans-serif";
+            teamContainer.appendChild(containerCalendario);
 
-              function renderizarCalendario() {
-                  containerCalendario.innerHTML = "";
+            function renderizarCalendario() {
+                containerCalendario.innerHTML = "";
 
-                  const anio = fechaActual.getFullYear();
-                  const mes = fechaActual.getMonth();
-                  const nombreMes = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(fechaActual);
-                  const esMesActual = (anio === HOY.getFullYear() && mes === HOY.getMonth());
+                const anio = fechaActual.getFullYear();
+                const mes = fechaActual.getMonth();
+                const nombreMes = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(fechaActual);
+                const esMesActual = (anio === HOY.getFullYear() && mes === HOY.getMonth());
 
-                  const header = document.createElement("div");
-                  header.style.display = "flex";
-                  header.style.justifyContent = "space-between";
-                  header.style.alignItems = "center";
-                  header.style.marginBottom = "15px";
-                  header.innerHTML = `
-                      <button id="prevMes" style="background-color: #333333; border:1px solid #333333; color:white; cursor:pointer; padding:5px 10px; border-radius:5px; visibility: ${esMesActual ? 'hidden' : 'visible'};">&lt;</button>
-                      <span style="text-transform: capitalize; font-weight: bold;">${nombreMes} ${anio}</span>
-                      <button id="nextMes" style="background-color: #333333; border:1px solid #333333; color:white; cursor:pointer; padding:5px 10px; border-radius:5px;">&gt;</button>
-                  `;
-                  containerCalendario.appendChild(header);
+                const header = document.createElement("div");
+                header.style.display = "flex";
+                header.style.justifyContent = "space-between";
+                header.style.alignItems = "center";
+                header.style.marginBottom = "15px";
+                header.innerHTML = `
+                    <button id="prevMes" style="background-color: #333333; border:1px solid #333333; color:white; cursor:pointer; padding:5px 10px; border-radius:5px; visibility: ${esMesActual ? 'hidden' : 'visible'};">&lt;</button>
+                    <span style="text-transform: capitalize; font-weight: bold;">${nombreMes} ${anio}</span>
+                    <button id="nextMes" style="background-color: #333333; border:1px solid #333333; color:white; cursor:pointer; padding:5px 10px; border-radius:5px;">&gt;</button>
+                `;
+                containerCalendario.appendChild(header);
 
-                  const grid = document.createElement("div");
-                  grid.style.display = "grid";
-                  // AJUSTE DE COLUMNAS: Lun-Vie (0.6fr) | Sáb-Dom (1.3fr cada una)
-                  // Esto hace que los días de diario sean estrechos y el bloque de finde sea ancho.
-                  grid.style.gridTemplateColumns = "0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 1.3fr 1.3fr";
-                  grid.style.gap = "3px";
+                const grid = document.createElement("div");
+                grid.style.display = "grid";
+                grid.style.gridTemplateColumns = "0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 1.3fr 1.3fr";
+                grid.style.gap = "3px";
 
-                  const diasSemana = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
-                  diasSemana.forEach(dia => {
-                      const d = document.createElement("div");
-                      d.style.textAlign = "center";
-                      d.style.marginBottom = "8px"
-                      d.style.fontWeight = "bold";
-                      d.style.fontSize = "0.7em";
-                      d.style.color = "#aaa";
-                      d.innerText = dia;
-                      grid.appendChild(d);
-                  });
+                const diasSemana = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+                diasSemana.forEach(dia => {
+                    const d = document.createElement("div");
+                    d.style.textAlign = "center";
+                    d.style.marginBottom = "8px";
+                    d.style.fontWeight = "bold";
+                    d.style.fontSize = "0.7em";
+                    d.style.color = "#aaa";
+                    d.innerText = dia;
+                    grid.appendChild(d);
+                });
 
-                  const primerDiaMes = new Date(anio, mes, 1);
-                  const ultimoDiaMes = new Date(anio, mes + 1, 0).getDate();
-                  const startColumn = primerDiaMes.getDay() === 0 ? 7 : primerDiaMes.getDay();
+                const primerDiaMes = new Date(anio, mes, 1);
+                const ultimoDiaMes = new Date(anio, mes + 1, 0).getDate();
+                const startColumn = primerDiaMes.getDay() === 0 ? 7 : primerDiaMes.getDay();
 
-                  for (let dia = 1; dia <= ultimoDiaMes; dia++) {
-                      const fechaIter = new Date(anio, mes, dia);
-                      const dSemana = fechaIter.getDay(); 
+                for (let dia = 1; dia <= ultimoDiaMes; dia++) {
+                    const fechaIter = new Date(anio, mes, dia);
+                    const dSemana = fechaIter.getDay();
 
-                      let elemento = document.createElement("div");
+                    let elemento = document.createElement("div");
 
-                      if (dSemana === 6 || (dSemana === 0 && dia !== 1)) { 
-                          if (dSemana === 6) {
-                              elemento.style.backgroundColor = "#333333";
-                              elemento.style.borderRadius = "4px";
-                              elemento.style.display = "flex";
-                              elemento.style.flexDirection = "column";
-                              elemento.style.justifyContent = "center";
-                              elemento.style.alignItems = "center";
-                              elemento.style.padding = "5px";
-                              elemento.style.minHeight = "45px";
-                              elemento.style.gridColumn = (dia === 1) ? "6 / span 2" : "span 2";
+                    if (dSemana === 6 || (dSemana === 0 && dia !== 1)) {
+                        if (dSemana === 6) {
+                            elemento.style.backgroundColor = "#333333";
+                            elemento.style.borderRadius = "4px";
+                            elemento.style.display = "flex";
+                            elemento.style.flexDirection = "column";
+                            elemento.style.justifyContent = "center";
+                            elemento.style.alignItems = "center";
+                            elemento.style.padding = "5px";
+                            elemento.style.minHeight = "45px";
+                            elemento.style.position = "relative"; // Necesario para posicionar números
+                            elemento.style.gridColumn = (dia === 1) ? "6 / span 2" : "span 2";
 
-                              const yr = anio % 100;
-                              const fechasSemana = [];
+                            // Número Sábado (Superior Izquierda)
+                            const numSab = document.createElement("span");
+                            numSab.innerText = dia;
+                            numSab.style.cssText = "position:absolute; top:2px; left:4px; font-size:0.5em; color:#aaa;";
+                            elemento.appendChild(numSab);
 
-                              for(let i = -5; i <= 1; i++) {
-                                  let fRelativa = new Date(anio, mes, dia + i);
-                                  if (teamName != "Indartsu Club") {
+                            // Número Domingo (Superior Derecha)
+                            if (dia + 1 <= ultimoDiaMes) {
+                                const numDom = document.createElement("span");
+                                numDom.innerText = dia + 1;
+                                numDom.style.cssText = "position:absolute; top:2px; right:4px; font-size:0.5em; color:#aaa;";
+                                elemento.appendChild(numDom);
+                            }
+
+                            const fechasSemana = [];
+                            for (let i = -5; i <= 1; i++) {
+                                let fRelativa = new Date(anio, mes, dia + i);
+                                if (teamName != "Indartsu Club") {
                                     fechasSemana.push(`${fRelativa.getDate()}/${fRelativa.getMonth() + 1}/${fRelativa.getFullYear() % 100}`);
-                                  } else {
+                                } else {
                                     fechasSemana.push(`${String(fRelativa.getDate()).padStart(2, '0')}-${String(fRelativa.getMonth() + 1).padStart(2, '0')}-${fRelativa.getFullYear()}`);
-                                  }
-                              }
+                                }
+                            }
 
-                              const partido = todosLosPartidos.find(p => fechasSemana.includes(p.fecha));
-                              const nombrePartidoCalendario = teamName == "FC Cartagena" ? "Cartagena" : teamName == "SD Eibar B" ? "Eibar B" : teamName == "CD Derio" ? "CD Derio" : "INDARTSU";
+                            const partido = todosLosPartidos.find(p => fechasSemana.includes(p.fecha));
+                            const nombrePartidoCalendario = teamName == "FC Cartagena" ? "Cartagena" : teamName == "SD Eibar B" ? "Eibar B" : teamName == "CD Derio" ? "CD Derio" : "INDARTSU";
 
-                              if (partido) {
+                            if (partido) {
                                 elemento.style.border = "1px solid #ff4444";
-
-                                // 1. Lógica de localía y rival
+                                
                                 const esCasa = partido.equipo_1.toLowerCase().includes(nombrePartidoCalendario.toLowerCase());
                                 const iconoCasa = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="flex-shrink:0;"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>`;
                                 const iconoAvion = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="flex-shrink:0; transform: rotate(45deg);"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>`;
@@ -1455,69 +1465,69 @@
                                 const nombreRival = esCasa ? partido.equipo_2 : partido.equipo_1;
                                 const nombreRivalLimpio = formatearNombreEquipo(nombreRival).replace(/"/g, "");
 
-                                // 2. Estructura para mantener línea pero permitir multilínea en el nombre
-                                elemento.innerHTML = `
-                                    <div style="font-size: 0.65em; display: flex; flex-direction: row; align-items: center; justify-content: space-around; gap: 3px; width: 100%; padding: 2px;">
-                                        <span style="font-size: 1.2em; flex-shrink: 0;">${icono}</span>
-                                        <span style="color: #ff4444; font-weight: bold; flex-shrink: 0;">vs</span>
-                                        <span style="font-weight: bold; white-space: normal; line-height: 1.1; text-align: center; word-break: break-word; width: auto; max-width: fit-content;">
-                                          ${nombreRivalLimpio}
-                                        </span>
-                                    </div>
+                                const infoContenedor = document.createElement("div");
+                                infoContenedor.style.cssText = "font-size: 0.65em; display: flex; flex-direction: row; align-items: center; justify-content: space-around; gap: 3px; width: 100%; padding: 2px; padding-top: 8px;";
+                                infoContenedor.innerHTML = `
+                                    <span style="font-size: 1.2em; flex-shrink: 0;">${icono}</span>
+                                    <span style="color: #ff4444; font-weight: bold; flex-shrink: 0;">vs</span>
+                                    <span style="font-weight: bold; white-space: normal; line-height: 1.1; text-align: center; word-break: break-word; width: auto; max-width: fit-content;">
+                                      ${nombreRivalLimpio}
+                                    </span>
                                 `;
-                              }
+                                elemento.appendChild(infoContenedor);
+                            }
 
-                              if (dia + 1 <= ultimoDiaMes) dia++; 
-                              grid.appendChild(elemento);
-                          }
-                      } else { 
-                          if (dSemana !== 0) {
-                              elemento.innerText = dia;
-                              elemento.style.aspectRatio = "1 / 1.4"; // Un poco más alto que ancho
-                          } else {
+                            if (dia + 1 <= ultimoDiaMes) dia++;
+                            grid.appendChild(elemento);
+                        }
+                    } else {
+                        if (dSemana !== 0) {
+                            elemento.innerText = dia;
+                            elemento.style.aspectRatio = "1 / 1.4";
+                        } else {
                             elemento.style.aspectRatio = "1.6 / 1";
-                          }
-                          elemento.style.backgroundColor = "#333333";
-                          elemento.style.display = "flex";
-                          elemento.style.alignItems = "center";
-                          elemento.style.justifyContent = "center";
-                          elemento.style.fontSize = "0.85em";
-                          elemento.style.borderRadius = "4px";
+                        }
+                        elemento.style.backgroundColor = "#333333";
+                        elemento.style.display = "flex";
+                        elemento.style.alignItems = "center";
+                        elemento.style.justifyContent = "center";
+                        elemento.style.fontSize = "0.85em";
+                        elemento.style.borderRadius = "4px";
 
-                          if (dia === 1) elemento.style.gridColumnStart = startColumn;
+                        if (dia === 1) elemento.style.gridColumnStart = startColumn;
 
-                          if (dia === HOY.getDate() && mes === HOY.getMonth() && anio === HOY.getFullYear()) {
-                              elemento.style.backgroundColor = "#ff4444";
-                              elemento.style.fontWeight = "bold";
-                          }
-                          grid.appendChild(elemento);
-                      }
-                  }
-                  containerCalendario.appendChild(grid);
+                        if (dia === HOY.getDate() && mes === HOY.getMonth() && anio === HOY.getFullYear()) {
+                            elemento.style.backgroundColor = "#ff4444";
+                            elemento.style.fontWeight = "bold";
+                        }
+                        grid.appendChild(elemento);
+                    }
+                }
+                containerCalendario.appendChild(grid);
 
-                  document.getElementById("prevMes").onclick = () => {
-                      fechaActual.setMonth(fechaActual.getMonth() - 1);
-                      renderizarCalendario();
-                  };
-                  document.getElementById("nextMes").onclick = () => {
-                      fechaActual.setMonth(fechaActual.getMonth() + 1);
-                      renderizarCalendario();
-                  };
-              }
-              renderizarCalendario();
-          }
-      } catch (error) {
-          console.error("Error al cargar calendario:", error);
-      }
-  }
-
+                document.getElementById("prevMes").onclick = () => {
+                    fechaActual.setMonth(fechaActual.getMonth() - 1);
+                    renderizarCalendario();
+                };
+                document.getElementById("nextMes").onclick = () => {
+                    fechaActual.setMonth(fechaActual.getMonth() + 1);
+                    renderizarCalendario();
+                };
+            }
+            renderizarCalendario();
+        }
+    } catch (error) {
+        console.error("Error al cargar calendario:", error);
+    }
+}
+  
   function formatearNombreEquipo(texto) {
     if (!texto) return "";
 
     return texto.toLowerCase().split(' ').map(palabra => {
         // 1. Si contiene comillas
         // 2. Si la longitud es de 1 a 3 caracteres (ej: "CD", "SD", "ZAR")
-        if (palabra.includes('"') || (palabra.length >= 1 && palabra.length <= 3)) {
+        if (palabra.includes('"') || (palabra.length >= 1 && palabra.length <= 3 && palabra.toLowerCase() != "la" && palabra.toLowerCase() != "ona" && palabra.toLowerCase() != "san")) {
             return palabra.toUpperCase();
         }
 
