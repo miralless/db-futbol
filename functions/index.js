@@ -41,7 +41,7 @@ function formatearFecha(fechaSucio) {
 }
 
 async function scriptIntegradoFutbol() {
-    console.log("🚀 Iniciando Extracción con selectores de tabla actualizados...");
+    console.log("🚀 Iniciando extracción...");
     
     const baseDeDatosFutbol = [];
     const browser = await puppeteer.launch({ 
@@ -158,38 +158,50 @@ async function scriptIntegradoFutbol() {
         const pageInd = await browser.newPage();
         try {
             await pageInd.goto("https://www.fvf-bff.eus/pnfg/NPcd/NFG_VisCompeticiones_Grupo?cod_primaria=1000123&codequipo=30094&codgrupo=22682897", { waitUntil: 'networkidle2' });
+            
             const dataInd = await pageInd.evaluate(() => {
                 const filas = Array.from(document.querySelectorAll('tbody tr'));
-                const lista = [];
+                const listaCompleta = [];
                 let maxJornada = 0;
+
                 filas.forEach(f => {
                     const tds = f.querySelectorAll('td');
                     if (tds.length < 3) return;
+
                     const jNum = parseInt(tds[0].innerText.trim());
                     const h5s = Array.from(tds[1].querySelectorAll('h5'));
+                    
+                    const eq1 = h5s[0]?.innerText.trim() || "---";
+                    const eq2 = h5s[1]?.innerText.trim() || "---";
                     const fechaHoraTexto = h5s[2]?.innerText.replace(/\s+/g, ' ').trim() || ""; 
-                    const partes = fechaHoraTexto.split(' ');
+                    const partes = fechaHoraTexto.split(' '); 
+                    
                     const res = tds[2].innerText.trim();
                     const yaJugado = /\d/.test(res);
+
                     if (yaJugado && jNum > maxJornada) maxJornada = jNum;
-                    lista.push({
+
+                    listaCompleta.push({
                         jNum: jNum,
-                        f: partes[0] || "",
-                        h: partes[1] || "",
-                        rival: h5s[0]?.innerText.toUpperCase().includes("INDARTSU") ? `${h5s[1]?.innerText.trim()} (C)` : `${h5s[0]?.innerText.trim()} (F)`,
+                        fecha: partes[0] || "---",
+                        hora: partes[1] || "---",
+                        equipo_1: eq1,
+                        equipo_2: eq2,
                         resultado: res,
                         yaJugado: yaJugado
                     });
                 });
-                const jugados = lista.filter(p => p.yaJugado);
-                const futuros = lista.filter(p => !p.yaJugado);
+
+                const jugados = listaCompleta.filter(p => p.yaJugado);
+                const futuros = listaCompleta.filter(p => !p.yaJugado);
                 const u = jugados[jugados.length - 1];
                 const p = futuros[0];
 
                 return { 
-                    ultimo: u ? { infoJornada: `JORNADA ${u.jNum}`, fRaw: u.f, rival: u.rival, resultado: u.resultado } : null, 
-                    proximo: p ? { infoJornada: `JORNADA ${p.jNum}`, rival: p.rival, fRaw: p.f, hRaw: p.h } : null, 
-                    jornadaNum: maxJornada 
+                    ultimo: u ? { infoJornada: `JORNADA ${u.jNum}`, fRaw: u.fecha, rival: u.equipo_1.toUpperCase().includes("INDARTSU") ? `${u.equipo_2} (C)` : `${u.equipo_1} (F)`, resultado: u.resultado } : null, 
+                    proximo: p ? { infoJornada: `JORNADA ${p.jNum}`, rival: p.equipo_1.toUpperCase().includes("INDARTSU") ? `${p.equipo_2} (C)` : `${p.equipo_1} (F)`, fRaw: p.fecha, hRaw: p.hora } : null, 
+                    jornadaNum: maxJornada,
+                    partidosRaw: listaCompleta 
                 };
             });
 
@@ -203,10 +215,43 @@ async function scriptIntegradoFutbol() {
             }
             
             jIndartsu = dataInd.jornadaNum;
-            baseDeDatosFutbol.push({ nombre: "Indartsu", tipo: "equipo", origen: "Federacion", ...dataInd });
-            console.log(`✅ Equipo Indartsu extraído`);
-        } catch (e) { console.error("❌ Error Indartsu"); }
-        await pageInd.close();
+
+            // A) Registro tipo "equipo" (Resumen: último y próximo)
+            const { partidosRaw, ...datosEquipo } = dataInd;
+            baseDeDatosFutbol.push({ 
+                nombre: "Indartsu", 
+                tipo: "equipo", 
+                origen: "Federacion", 
+                ...datosEquipo 
+            });
+
+            // B) Registro tipo "lista_partidos" (Solo futuros: yaJugado === false)
+            if (partidosRaw && partidosRaw.length > 0) {
+                const partidosFuturos = partidosRaw
+                    .filter(p => !p.yaJugado) // <--- FILTRO PARA QUEDARNOS SOLO CON LOS NO JUGADOS
+                    .map(p => ({
+                        fecha: p.fecha,
+                        resultado_hora: p.hora, // Como no están jugados, guardamos la hora
+                        equipo_1: p.equipo_1,
+                        equipo_2: p.equipo_2
+                    }));
+
+                if (partidosFuturos.length > 0) {
+                    baseDeDatosFutbol.push({
+                        nombre: "indartsu",
+                        tipo: "lista_partidos",
+                        origen: "Federacion",
+                        partidos: partidosFuturos
+                    });
+                }
+            }
+
+            console.log(`✅ Equipo Indartsu y lista_partidos_indartsu (solo futuros) preparados`);
+        } catch (e) { 
+            console.error("❌ Error Indartsu:", e.message); 
+        } finally { 
+            await pageInd.close(); 
+        }
 
         // --- 2.1 CLASIFICACIÓN FC CARTAGENA ---
         const pageClasCartagena = await browser.newPage();
@@ -394,6 +439,85 @@ async function scriptIntegradoFutbol() {
             }
         } catch (e) { console.error("❌ Error Clasificación Indartsu"); }
         await pageClasInd.close();
+
+        // --- 2.5 EXTRACCIÓN PARTIDOS SOFASCORE (Derio, Eibar B, Cartagena) ---
+        const urlsSofa = [
+            { id: "derio", url: "https://www.sofascore.com/es/football/team/cd-derio/488513" },
+            { id: "eibar_b", url: "https://www.sofascore.com/es/football/team/sd-eibar-b/750559" },
+            { id: "cartagena", url: "https://www.sofascore.com/es/football/team/fc-cartagena/24329" }
+        ];
+
+        for (const s of urlsSofa) {
+            const page = await browser.newPage();
+            try {
+                // Mantenemos tu Viewport específico
+                await page.setViewport({ width: 800, height: 731 });
+                
+                // El User Agent es vital para que SofaScore no bloquee la segunda y tercera carga
+                await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+                await page.goto(s.url, { waitUntil: 'networkidle2', timeout: 60000 });
+
+                // Aceptar cookies (siempre con un try/catch pequeño)
+                try {
+                    const btnCookies = await page.waitForSelector('button[id*="onetrust-accept"], button.fc-cta-consent', { timeout: 4000 });
+                    await btnCookies.click();
+                } catch (e) {}
+
+                // 1. Localizar el botón de "Partidos" de forma más flexible
+                // A veces el data-testid tarda en estar activo. Usamos una función de evaluación.
+                const selectorPartidos = 'button[data-testid="tab-matches"]';
+                await page.waitForSelector(selectorPartidos, { visible: true, timeout: 15000 });
+
+                // 2. Clic forzado mediante JS (más fiable en viewports pequeños donde otros elementos pueden solapar)
+                await page.evaluate((sel) => {
+                    const btn = document.querySelector(sel);
+                    if (btn) {
+                        btn.scrollIntoView();
+                        btn.click();
+                    }
+                }, selectorPartidos);
+                
+                // 3. Esperar a que el contenedor de partidos aparezca realmente
+                await page.waitForSelector('a[data-id]', { timeout: 15000 });
+                await delay(3000); // Pausa necesaria para que carguen los <bdi> internos
+
+                const partidosExtraidos = await page.evaluate(() => {
+                    const links = Array.from(document.querySelectorAll('a[data-id]'));
+                    return links.map(link => {
+                        const bdis = Array.from(link.querySelectorAll('bdi'))
+                                        .map(b => b.innerText.trim())
+                                        .filter(t => t.length > 0);
+                        
+                        const indexHora = bdis.findIndex(t => t.includes(':') || (t.includes('-') && /\d/.test(t)));
+                        
+                        return {
+                            fecha: bdis[0] || "---",
+                            resultado_hora: indexHora !== -1 ? bdis[indexHora] : "---",
+                            equipo_1: indexHora !== -1 ? bdis[indexHora + 1] : "---",
+                            equipo_2: indexHora !== -1 ? bdis[indexHora + 2] : "---"
+                        };
+                    });
+                });
+
+                if (partidosExtraidos.length > 0) {
+                    baseDeDatosFutbol.push({
+                        nombre: s.id,
+                        tipo: "lista_partidos",
+                        origen: "SofaScore",
+                        partidos: partidosExtraidos
+                    });
+                    console.log(`✅ Partidos de ${s.id} extraídos (${partidosExtraidos.length})`);
+                } else {
+                    console.log(`⚠️ No se detectaron partidos en el HTML de ${s.id}`);
+                }
+
+            } catch (e) { 
+                console.error(`❌ Error SofaScore partidos ${s.id}:`, e.message); 
+            } finally { 
+                await page.close(); 
+            }
+        }
 
         // --- 3. JUGADORES (LAPREFERENTE) ---
         const jugadoresLP = [
