@@ -278,7 +278,7 @@
               const tablaData = data.tabla;
               const nextTitle = document.createElement("div");
               nextTitle.className = "titleInfo";
-              nextTitle.innerHTML = `<h3>CLASIFICACIÓN</h3>`;
+              nextTitle.innerHTML = `<h3>CLASIFICACIÓN</h3><br><h5>${teamName == "CD Derio" ? "3ª RFEF (Gr. 4)" : "2ª RFEF (Gr. 2)"}</h5>`;
               teamContainer.appendChild(nextTitle);
 
               const containerClasificacion = document.createElement("div");
@@ -646,7 +646,7 @@
               const tablaData = data.tabla;
               const nextTitle = document.createElement("div");
               nextTitle.className = "titleInfo";
-              nextTitle.innerHTML = `<h3>CLASIFICACIÓN</h3>`;
+              nextTitle.innerHTML = `<h3>CLASIFICACIÓN</h3><br><h5>1ª RFEF (Gr. 2)</h5>`;
               teamContainer.appendChild(nextTitle);
 
               const containerClasificacion = document.createElement("div");
@@ -955,7 +955,7 @@
             const tablaData = data.tabla;
             const nextTitle = document.createElement("div");
             nextTitle.className = "titleInfo";
-            nextTitle.innerHTML = `<h3>CLASIFICACIÓN</h3>`;
+            nextTitle.innerHTML = `<h3>CLASIFICACIÓN</h3><br><h5>1ª REG (Gr. 2)</h5>`;
             teamContainer.appendChild(nextTitle);
 
             const containerClasificacion = document.createElement("div");
@@ -1473,12 +1473,16 @@
                             }
 
                             // Generar fechas de Sábado y Domingo para buscar el partido
+                            const fechaLun = new Date(anio, mes, dia - 5);
+                            const fechaMar = new Date(anio, mes, dia - 4);
+                            const fechaMie = new Date(anio, mes, dia - 3);
+                            const fechaJue = new Date(anio, mes, dia - 2);
                             const fechaVie = new Date(anio, mes, dia - 1);
                             const fechaSab = new Date(anio, mes, dia);
                             const fechaDom = new Date(anio, mes, dia + 1);
 
                             const formatosABuscar = [];
-                            [fechaVie, fechaSab, fechaDom].forEach(f => {
+                            [fechaLun, fechaMar, fechaMie, fechaJue, fechaVie, fechaSab, fechaDom].forEach(f => {
                                 const d = f.getDate();
                                 const m = f.getMonth() + 1;
                                 const yFull = f.getFullYear();

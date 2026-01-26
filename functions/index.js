@@ -406,7 +406,7 @@ async function scriptIntegradoFutbol() {
         // --- 2.4 CLASIFICACIÓN INDARTSU ---
         const pageClasInd = await browser.newPage();
         try {
-            await pageClasInd.goto("https://www.fvf-bff.eus/pnfg/NPcd/NFG_VisClasificacion?cod_primaria=1000120&codjornada=17&codcompeticion=22620319&codgrupo=22682897&codjornada=17&cod_agrupacion=1773563", { waitUntil: 'networkidle2' });
+            await pageClasInd.goto("https://www.fvf-bff.eus/pnfg/NPcd/NFG_VisClasificacion?cod_primaria=1000120&codcompeticion=22620319&codgrupo=22682897&cod_agrupacion=1773563", { waitUntil: 'networkidle2' });
             const tablaClas = await pageClasInd.evaluate(() => {
                 // Seleccionamos la tabla por sus clases exactas
                 const tabla = document.querySelector('table.table.table-bordered.table-striped');
@@ -592,14 +592,38 @@ async function scriptIntegradoFutbol() {
         // --- 5. SUBIDA A FIREBASE ---
         if (baseDeDatosFutbol.length > 0) {
             const batch = db.batch();
+            
+            /**
+             * EXPLICACIÓN REGEX:
+             * ^\d+ : Empieza por uno o más dígitos
+             * \s+-\s+ : Seguido de uno o más espacios, un guion, y uno o más espacios
+             * \d+ : Seguido de uno o más dígitos
+             * (\s*[GPE])? : Opcionalmente, cero o más espacios y una de las letras G, P o E
+             * $ : Fin de la cadena
+             */
+            const regexResultadoPersonalizado = /^\d+\s+-\s+\d+(\s*[GPE])?$/;
+
             baseDeDatosFutbol.forEach(dato => {
                 const customId = crearIdDoc(dato.tipo, dato.nombre);
                 const docRef = db.collection('seguimiento_futbol').doc(customId);
-                const { jornadaNum, origen, tipo, ...datosLimpios } = dato;
-                batch.set(docRef, datosLimpios, { merge: true });
+
+                if (dato.tipo === "equipo") {
+                    const resUltimo = dato.ultimo?.resultado || "";
+                    if (regexResultadoPersonalizado.test(resUltimo)) {
+                        const { jornadaNum, origen, tipo, ...datosLimpios } = dato;
+                        batch.set(docRef, datosLimpios, { merge: true });
+                        console.log(`✅ ${dato.nombre} cumple el filtro (${resUltimo}). Subiendo...`);
+                    } else {
+                        console.log(`⚠️ ${dato.nombre} NO cumple el filtro (${resUltimo}). Ignorado.`);
+                    }
+                } else {
+                    const { jornadaNum, origen, tipo, ...datosLimpios } = dato;
+                    batch.set(docRef, datosLimpios, { merge: true });
+                }
             });
+
             await batch.commit();
-            console.log("✅ Firebase actualizado!");
+            console.log("✅ Firebase finalizado!");
         }
 
     } catch (error) { console.error("❌ Error General:", error); }
