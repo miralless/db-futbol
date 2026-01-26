@@ -1,30 +1,28 @@
-name: Actualizacion Automatica Futbol
+name: Actualizar Firebase Futbol
+
 on:
   schedule:
-    # Se ejecuta cada hora (minuto 0)
+    # Se ejecuta al minuto 0 de cada hora
     - cron: '0 * * * *'
-  workflow_dispatch: # ESTO permite que lo ejecutes "cuando tú quieras" manualmente
+  workflow_dispatch: # Esto permite que tú le des al botón de "Ejecutar ahora"
 
 jobs:
-  scrapeo:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
-          node-version: '20'    
+          node-version: '18'
 
       - name: Instalar dependencias
-        run: |
-          # Entramos directamente a la carpeta functions donde está el package.json
-          cd functions && npm install
+        run: npm install
 
-      - name: Ejecutar Scrapeo
-        run: |
-          # Ejecutamos el script desde la carpeta functions
-          node functions/index.js
+      - name: Ejecutar script de extracción
         env:
+          # Aquí conectamos el secreto de GitHub con tu código
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node index.js
