@@ -630,4 +630,23 @@ async function scriptIntegradoFutbol() {
     finally { await browser.close(); }
 }
 
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Servidor para que Render no dé error de "Port binding"
+app.get('/', (req, res) => {
+    res.send('El bot de fútbol está encendido y funcionando. ⚽');
+});
+
+app.listen(PORT, () => {
+    console.log(`Servidor escuchando en el puerto ${PORT}`);
+});
+
+// Función para ejecutar el script cada hora (3600000 ms)
+setInterval(() => {
+    console.log("Iniciando actualización programada...");
+    scriptIntegradoFutbol(); 
+}, 3600000);
+
 scriptIntegradoFutbol();
