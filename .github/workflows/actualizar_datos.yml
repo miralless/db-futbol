@@ -2,7 +2,15 @@ name: Actualizar Firebase Futbol
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    # Lunes a Jueves (1-4): Cada 3 horas
+    - cron: '0 */3 * * 1-4'
+    
+    # Viernes y Sábado (5-6): Cada hora
+    - cron: '0 * * * 5-6'
+    
+    # Domingo (0): Cada hora
+    - cron: '0 * * * 0'
+    
   workflow_dispatch:
 
 jobs:
