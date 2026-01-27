@@ -53,105 +53,116 @@ async function scriptIntegradoFutbol() {
 
     try {
         const equiposLaPreferente = [
-            { nombre: "Eibar B", url: "https://www.lapreferente.com/E5847C22299-19/sd-eibar-b", fotmob: "https://www.fotmob.com/teams/189634/overview/eibar-b" },
-            { nombre: "Derio", url: "https://www.lapreferente.com/E10466C22283-19/cd-derio", sofascore: "https://www.sofascore.com/es/football/team/cd-derio/488513" },
-            { nombre: "Cartagena", url: "https://www.lapreferente.com/E712C22270-1/fc-cartagena-sad", fotmob: "https://www.fotmob.com/teams/8554/overview/cartagena" }
+            { nombre: "Eibar B", url: "https://www.sofascore.com/es/football/team/sd-eibar-b/750559", fotmob: "https://www.fotmob.com/teams/189634/overview/eibar-b" },
+            { nombre: "CD Derio", url: "https://www.sofascore.com/es/football/team/cd-derio/488513" },
+            { nombre: "FC Cartagena", url: "https://www.sofascore.com/es/football/team/fc-cartagena/24329", fotmob: "https://www.fotmob.com/teams/8554/overview/cartagena" }
         ];
 
-        // --- 1. EXTRACCIÓN EQUIPOS LA PREFERENTE ---
         for (const e of equiposLaPreferente) {
             const page = await browser.newPage();
-            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
             
+            // Configuración de pantalla solicitada
+            await page.setViewport({ width: 800, height: 731 });
+            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
             try {
-                await page.goto(e.url, { waitUntil: 'networkidle2', timeout: 45000 });
-                const data = await page.evaluate((nFiltro) => {
-                    const ahora = new Date();
-                    const tablas = Array.from(document.querySelectorAll('table.lpfTable01'));
-                    const partidos = [];
+                await page.goto(e.url, { waitUntil: 'networkidle2', timeout: 60000 });
 
-                    tablas.forEach(tabla => {
-                        const th = tabla.querySelector('th');
-                        if (!th) return;
-                        const matchFecha = th.innerText.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-                        if (matchFecha) {
-                            const fechaTab = new Date(matchFecha[3], matchFecha[2] - 1, matchFecha[1]);
-                            const fila = Array.from(tabla.querySelectorAll('tr')).find(tr => tr.innerText.toLowerCase().includes(nFiltro.toLowerCase()));
-                            if (fila) {
-                                const tds = fila.querySelectorAll('td');
-                                if (tds.length >= 3) {
-                                    partidos.push({
-                                        fecha: fechaTab,
-                                        fechaString: `${matchFecha[1]}/${matchFecha[2]}/${matchFecha[3]}`,
-                                        infoJornada: th.innerText.trim(),
-                                        rival: tds[0].innerText.toLowerCase().includes(nFiltro.toLowerCase()) ? `${tds[2].innerText.trim()} (C)` : `${tds[0].innerText.trim()} (F)`,
-                                        resultado: tds[1].innerText.trim()
-                                    });
-                                }
-                            }
-                        }
-                    });
+                // Aceptar cookies rápido
+                try {
+                    const btnCookies = await page.waitForSelector('button[id*="onetrust-accept"]', { timeout: 3000 });
+                    await btnCookies.click();
+                } catch (err) {}
 
-                    const pasados = partidos.filter(p => p.fecha <= ahora).sort((a, b) => b.fecha - a.fecha);
-                    const futuros = partidos.filter(p => p.fecha > ahora).sort((a, b) => a.fecha - b.fecha);
-                    const numJornada = pasados[0]?.infoJornada.match(/\d+/)?.[0] || "0";
+                // --- 1. Ir a la pestaña de Partidos ---
+const selectorTabPartidos = 'button[data-testid="tab-matches"]';
+await page.waitForSelector(selectorTabPartidos, { visible: true, timeout: 20000 });
 
-                    return {
-                        ultimo: pasados[0] ? { infoJornada: pasados[0].infoJornada, rival: pasados[0].rival, resultado: pasados[0].resultado } : null,
-                        proximo: futuros[0] ? { infoJornada: futuros[0].infoJornada, rival: futuros[0].rival, resultado: futuros[0].resultado, fechaRef: futuros[0].fechaString } : null,
-                        jornadaNum: parseInt(numJornada)
-                    };
-                }, e.nombre);
+// Click mediante evaluate para saltar bloqueos visuales
+await page.evaluate((sel) => {
+    const btn = document.querySelector(sel);
+    if (btn) btn.click();
+}, selectorTabPartidos);
 
-                if (e.sofascore && data.proximo) {
-                    const pageSofa = await browser.newPage();
-                    try {
-                        await pageSofa.goto(e.sofascore, { waitUntil: 'networkidle2' });
-                        await delay(2000);
-                        await pageSofa.evaluate(() => {
-                            const btn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('ACEPTAR') || b.innerText.includes('AGREE'));
-                            if (btn) btn.click();
-                        });
-                        const textoSucio = await pageSofa.evaluate(() => document.querySelector('div.card-component.desktop-only')?.innerText || "");
-                        const regexHorario = /(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d{2}:\d{2})/g;
-                        let coincidencias = []; let m;
-                        while ((m = regexHorario.exec(textoSucio)) !== null) {
-                            coincidencias.push({ f: m[1], h: m[2] });
-                        }
-                        if (coincidencias.length >= 2) {
-                            data.proximo.resultado = `${formatearFecha(coincidencias[1].f)} ${coincidencias[1].h}`;
-                        }
-                    } catch (err) { console.log("⚠️ Error SofaScore"); }
-                    finally { await pageSofa.close(); }
-                }
+await delay(2000); // Espera breve para que cargue el submenú
 
-                if (e.fotmob && data.proximo) {
-                    const pageFot = await browser.newPage();
-                    try {
-                        await pageFot.goto(e.fotmob, { waitUntil: 'networkidle2' });
-                        await delay(2000);
-                        const horaFot = await pageFot.evaluate(() => {
-                            const section = document.querySelector('section[class*="NextMatchBoxCSS"]');
-                            if (!section) return null;
-                            const el = Array.from(section.querySelectorAll('span, div')).find(el => /^(\d{1,2}:\d{2})/i.test(el.innerText.trim()));
-                            return el ? el.innerText.trim() : null;
-                        });
-                        if (horaFot) {
-                            data.proximo.resultado = `${formatearFecha(data.proximo.fechaRef)} ${horaFot}`;
-                        }
-                    } catch (err) { console.log("⚠️ Error FotMob"); }
-                    finally { await pageFot.close(); }
-                }
+// --- 2. Ir a la pestaña de Resultados ---
+// Buscamos cualquier elemento que diga "Resultados" dentro de la zona de pestañas
+try {
+    await page.evaluate(() => {
+        const tabs = Array.from(document.querySelectorAll('button, a, div[role="tab"]'));
+        const btnResultados = tabs.find(t => /Resultados/i.test(t.innerText));
+        if (btnResultados) {
+            btnResultados.scrollIntoView();
+            btnResultados.click();
+        }
+    });
+    
+    // Esperamos específicamente a que el contenedor de resultados cambie
+    // En lugar de un delay fijo, esperamos a que aparezca un partido finalizado
+    await page.waitForFunction(() => 
+        Array.from(document.querySelectorAll('a[data-id]')).some(a => a.innerText.includes('Final')),
+        { timeout: 15000 }
+    ).catch(() => console.log("      (Nota: No se detectaron partidos con texto 'Final' tras el click)"));
 
-                if (data.proximo) delete data.proximo.fechaRef;
-                if (e.nombre === "Eibar B") jEibarB = data.jornadaNum;
-                if (e.nombre === "Derio") jDerio = data.jornadaNum;
-                if (e.nombre === "Cartagena") jCartagena = data.jornadaNum;
+} catch (err) {
+    console.log("   ⚠️ Fallo al intentar pulsar en 'Resultados'");
+}
 
-                baseDeDatosFutbol.push({ nombre: e.nombre, tipo: "equipo", origen: "LaPreferente", ...data });
-                console.log(`✅ Equipo ${e.nombre} extraído`);
-            } catch (err) { console.error(`❌ Error equipo ${e.nombre}`); }
-            await page.close();
+// --- 3. Extracción final ---
+const ultimoResultado = await page.evaluate((nFiltro) => {
+    // 1. Localizar el contenedor de la lista
+    const contenedor = document.querySelector('div.pb_sm.pt_xs');
+    if (!contenedor) return null;
+
+    // 2. Localizar los bloques de partido (enlaces con data-id)
+    const partidos = Array.from(contenedor.querySelectorAll('a[data-id]'));
+    
+    // 3. Seleccionar el segundo partido (índice 1) si existe, sino el primero
+    const elPartido = partidos[0];
+    if (!elPartido) return null;
+
+    // 4. EXTRAER EQUIPOS: Buscamos los bdi que están dentro de la sección de nombres
+    // Filtramos por aquellos que tienen la clase de truncado típica de SofaScore para nombres
+    const bdisEquipos = Array.from(elPartido.querySelectorAll('bdi.trunc_true'));
+    
+    // 5. EXTRAER MARCADOR: Buscamos los span con la clase score
+    const scores = Array.from(elPartido.querySelectorAll('span.score'))
+                        .map(s => s.innerText.trim())
+                        .filter(t => t !== "" && !t.includes(':')); // Evitamos horas
+
+    // 6. EXTRAER FECHA
+    const fechaElemento = elPartido.querySelector('bdi');
+    const fechaPartida = fechaElemento ? fechaElemento.innerText.trim() : "---";                    
+
+    if (bdisEquipos.length >= 2 && scores.length >= 2) {
+        return {
+            local: bdisEquipos[1].innerText,
+            visitante: bdisEquipos[2].innerText,
+            fecha: fechaPartida,
+            resultado: `${scores[1]} - ${scores[2]}`,
+            jornada: `JORNADA ${partidos.length}`
+        };
+    }
+    
+    return null;
+}, e.nombre);
+
+                // Guardamos solo el último, ya que el próximo ya lo tienes en otra parte
+                baseDeDatosFutbol.push({
+                    nombre: e.nombre,
+                    tipo: "equipo",
+                    origen: "SofaScore",
+                    ultimo: ultimoResultado
+                });
+
+                console.log(`✅ Último partido de ${e.nombre} guardado.`);
+
+            } catch (err) {
+                console.error(`❌ Error procesando ${e.nombre}:`, err.message);
+            } finally {
+                await page.close();
+            }
         }
 
         // --- 2. EQUIPO INDARTSU (FEDERACIÓN) ---

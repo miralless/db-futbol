@@ -52,8 +52,8 @@
   const mapeoIdsSeguimiento = {
     "equipo_sd_eibar_b": "equipo_eibar_b",
     "equipo_indartsu_club": "equipo_indartsu",
-    "equipo_cd_derio": "equipo_derio",
-    "equipo_fc_cartagena": "equipo_cartagena"
+    "equipo_cd_derio": "equipo_cd_derio",
+    "equipo_fc_cartagena": "equipo_fc_cartagena"
   };
 
   // 2. Mapeo para los IDs de la colección "Equipos" (Base de datos principal)
@@ -90,6 +90,28 @@
         return `${dia}/${mes}/${anio}`;
     }
     return fechaSucio; // Si algo falla, devuelve el original
+  }
+
+  function formatearFechaSofa(fechaStr) {
+      if (!fechaStr || typeof fechaStr !== 'string') return "---";
+
+      // Separamos por la barra /
+      const partes = fechaStr.split('/');
+
+      // Validamos que tengamos las 3 partes (día, mes, año)
+      if (partes.length !== 3) return fechaStr;
+
+      // 1. Procesar Día y Mes: Añadimos cero a la izquierda si solo hay un dígito
+      let dia = partes[0].padStart(2, '0');
+      let mes = partes[1].padStart(2, '0');
+      let anio = partes[2];
+
+      // 2. Procesar Año: Si tiene 2 dígitos, asumimos que es el siglo XXI (20xx)
+      if (anio.length === 2) {
+          anio = '20' + anio;
+      }
+
+      return `${dia}/${mes}/${anio}`;
   }
 
   async function cargarEquipo() {
@@ -133,33 +155,32 @@
         const { ultimo, proximo } = dataStats;
 
         if (teamName != "Indartsu Club" && teamName != "FC Cartagena") {
+          let jornada = 0;
           // --- 2. Bloque Último Partido ---
           if (ultimo) {
             const lastTitle = document.createElement("div");
             lastTitle.className = "titleInfo";
 
-            var jornadaLimpia = ultimo.infoJornada
-              .replace(/schedule/gi, '')
-              .replace(/get_app/gi, '')
-              .trim();
+            const fecha = ultimo.fecha;
+            const refClas = doc(db, "seguimiento_futbol", `clasificacion_${nombreClasif(teamName)}`);
+            const snapClas = await getDoc(refClas);
+            const data = snapClas.data();
+            const tablaData = data.tabla;
 
-            jornadaLimpia = jornadaLimpia.replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/, (match, d, m, y) => {
-                const dia = d.padStart(2, '0');
-                const mes = m.padStart(2, '0');
-                return `${dia}/${mes}/${y}`;
-            });
+            tablaData.forEach(element => {
+              if (element.nombre == "C.D. Derio" || element.nombre == "S.D. Eibar B") {
+                jornada = element.Jugados;
+              }
+            })
 
-            const jornada = jornadaLimpia.split(' - ')[0].split(' - ')[0];
-            const fecha = jornadaLimpia.split(' - ')[1].split(' - ')[0];
-
-            lastTitle.innerHTML = `<h3>${jornada} (${fecha})</h3>`;
+            lastTitle.innerHTML = `<h3>JORNADA ${jornada} (${formatearFechaSofa(fecha)})</h3>`;
             teamContainer.appendChild(lastTitle);
 
             const lastDetails = document.createElement("div");
             lastDetails.className = "detailsDiv";
             
-            const esCasa = ultimo.rival.includes("(C)");
-            const rivalLimpio = ultimo.rival.replace("(C)", "").replace("(F)", "").trim();
+            const esCasa = teamName == ultimo.local;
+            const rivalLimpio = esCasa ? ultimo.visitante : ultimo.local;
 
             lastDetails.innerHTML = `
                 <div class="nombreEquipo partido ${esCasa ? 'verde' : ''}">${esCasa ? nombreOficial : rivalLimpio}</div>
@@ -170,97 +191,36 @@
           }
 
           // --- 3. Bloque Próximo Partido ---
-          if (proximo) {
-              const nextTitle = document.createElement("div");
-              nextTitle.className = "titleInfo";
 
-              var jornadaLimpia = proximo.infoJornada
-                  .replace(/schedule/gi, '')
-                  .replace(/get_app/gi, '')
-                  .trim();
+          const nextTitle = document.createElement("div");
+          nextTitle.className = "titleInfo";
 
-              jornadaLimpia = jornadaLimpia.replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/, (match, d, m, y) => {
-                  const dia = d.padStart(2, '0');
-                  const mes = m.padStart(2, '0');
-                  return `${dia}/${mes}/${y}`;
-              });
+          let nombreNM = teamName == "SD Eibar B" ? "eibar_b" : "derio"
 
-              const jornada = jornadaLimpia.split(' - ')[0];
-              let fecha = jornadaLimpia.split(' - ')[1];
+          const refClas = doc(db, "seguimiento_futbol", `lista_partidos_${nombreNM}`);
+          const snapClas = await getDoc(refClas);
+          const data = snapClas.data();
+          const tablaData = data.partidos;
 
-              // --- LÓGICA DE RESTAR DÍA SI ES SÁBADO (S-) ---
-              if (proximo.resultado.includes("S-")) {
-                  // 1. Extraer día, mes y año del string "DD/MM/YYYY"
-                  const [d, m, y] = fecha.split('/').map(Number);
-                  // 2. Crear objeto fecha (el mes en JS empieza en 0, por eso m-1)
-                  let fechaObj = new Date(y, m - 1, d);
-                  // 3. Restar un día
-                  fechaObj.setDate(fechaObj.getDate() - 1);
-                  // 4. Volver a formatear a "DD/MM/YYYY"
-                  const nuevoDia = String(fechaObj.getDate()).padStart(2, '0');
-                  const nuevoMes = String(fechaObj.getMonth() + 1).padStart(2, '0');
-                  const nuevoAnio = fechaObj.getFullYear();
-                  fecha = `${nuevoDia}/${nuevoMes}/${nuevoAnio}`;
-              }
+          const jornadaN = parseInt(jornada) + 1;
+          
+          const fecha = tablaData[0].fecha;
+          const hora = tablaData[0].resultado_hora;
 
-              function formatearFecha(fechaSucio) {
-                  // Dividimos la fecha por "/" (ej: "1/2/26" -> ["1", "2", "26"])
-                  const partes = fechaSucio.split('/');
-                  
-                  if (partes.length !== 3) return fechaSucio; // Si no tiene el formato esperado, devolver original
+          nextTitle.innerHTML = `<h3>JORNADA ${jornadaN} (${formatearFechaSofa(fecha)})</h3>`;
+          teamContainer.appendChild(nextTitle);
 
-                  const dia = partes[0].padStart(2, '0');  // Asegura 2 dígitos (1 -> 01)
-                  const mes = partes[1].padStart(2, '0');  // Asegura 2 dígitos (2 -> 02)
-                  let anio = partes[2];
+          const nextDetails = document.createElement("div");
+          nextDetails.className = "detailsDiv";
 
-                  // Si el año solo tiene 2 dígitos (26), le ponemos el 20 delante
-                  if (anio.length === 2) {
-                      anio = "20" + anio;
-                  }
+          const esCasaProx = tablaData[0].equipo_1.includes("Eibar B") || tablaData[0].equipo_1.includes("CD Derio");
 
-                  return `${dia}/${mes}/${anio}`;
-              }
-
-              function convertirHora24h(stringSucio) {
-                  // 1. Extraemos la parte de la hora y el meridiano (ej: "6:00 PM")
-                  const match = stringSucio.match(/(\d{1,2}):(\d{2})\s?(AM|PM)/i);
-                  if (!match) return null;
-
-                  let [_, horas, minutos, meridiano] = match;
-                  horas = parseInt(horas);
-
-                  // 2. Lógica de conversión
-                  if (meridiano.toUpperCase() === 'PM' && horas < 12) {
-                      horas += 12;
-                  } else if (meridiano.toUpperCase() === 'AM' && horas === 12) {
-                      horas = 0;
-                  }
-
-                  // 3. Formateamos con ceros a la izquierda (ej: "06:00" o "18:00")
-                  const horaFinal = horas.toString().padStart(2, '0');
-                  return `${horaFinal}:${minutos}`;
-              }
-
-              // Ahora limpiamos el resultado para el HTML
-              proximo.resultado = proximo.resultado.replace("S-", "");
-              proximo.resultado = proximo.resultado.replace("D-", "");
-
-              nextTitle.innerHTML = `<h3>${jornada} (${teamName == "CD Derio" ? formatearFecha(proximo.resultado.split(" ")[0]) : limpiarFecha(proximo.resultado)})</h3>`;
-              teamContainer.appendChild(nextTitle);
-
-              const nextDetails = document.createElement("div");
-              nextDetails.className = "detailsDiv";
-
-              const esCasaProx = proximo.rival.includes("(C)");
-              const rivalProxLimpio = proximo.rival.replace("(C)", "").replace("(F)", "").trim();
-
-              nextDetails.innerHTML = `
-                  <div class="nombreEquipo partido ${esCasaProx ? 'verde' : ''}">${esCasaProx ? nombreOficial : rivalProxLimpio}</div>
-                  <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content;">${teamName == "CD Derio" ? proximo.resultado.split(" ")[1] : convertirHora24h(proximo.resultado)}</div>
-                  <div class="nombreEquipo partido ${!esCasaProx ? 'verde' : ''}">${!esCasaProx ? nombreOficial : rivalProxLimpio}</div>
-              `;
-              teamContainer.appendChild(nextDetails);
-          }
+          nextDetails.innerHTML = `
+              <div class="nombreEquipo partido ${esCasaProx ? 'verde' : ''}">${tablaData[0].equipo_1}</div>
+              <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content;">${hora}</div>
+              <div class="nombreEquipo partido ${!esCasaProx ? 'verde' : ''}">${tablaData[0].equipo_2}</div>
+          `;
+          teamContainer.appendChild(nextDetails);   
 
           cargaCalendario();
 
@@ -541,99 +501,70 @@
           }
 
         } else if (teamName == "FC Cartagena") {
+          let jornada = 0;
           // --- 2. Bloque Último Partido ---
           if (ultimo) {
             const lastTitle = document.createElement("div");
             lastTitle.className = "titleInfo";
 
-            var jornadaLimpia = ultimo.infoJornada
-              .replace(/schedule/gi, '')
-              .replace(/get_app/gi, '')
-              .trim();
+            const fecha = ultimo.fecha;
+            const refClas = doc(db, "seguimiento_futbol", `clasificacion_fc_cartagena`);
+            const snapClas = await getDoc(refClas);
+            const data = snapClas.data();
+            const tablaData = data.tabla;
 
-            jornadaLimpia = jornadaLimpia.replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/, (match, d, m, y) => {
-                const dia = d.padStart(2, '0');
-                const mes = m.padStart(2, '0');
-                return `${dia}/${mes}/${y}`;
-            });
+            tablaData.forEach(element => {
+              if (element.nombre == "F.C. Cartagena") {
+                jornada = element.Jugados;
+              }
+            })
 
-            const jornada = jornadaLimpia.split(' - ')[0].split(' - ')[0];
-            const fecha = jornadaLimpia.split(' - ')[1].split(' - ')[0];
-
-            lastTitle.innerHTML = `<h3>${jornada} (${fecha})</h3>`;
+            lastTitle.innerHTML = `<h3>JORNADA ${jornada} (${formatearFechaSofa(fecha)})</h3>`;
             teamContainer.appendChild(lastTitle);
 
             const lastDetails = document.createElement("div");
             lastDetails.className = "detailsDiv";
             
-            const esCasa = ultimo.rival.includes("(C)");
-            const rivalLimpio = ultimo.rival.replace("(C)", "").replace("(F)", "").trim();
+            const esCasa = ultimo.local.includes("Cartagena");
+            const rivalLimpio = esCasa ? ultimo.visitante : ultimo.local;
 
             lastDetails.innerHTML = `
-                <div class="nombreEquipo partido ${esCasa ? 'verde' : ''}">${esCasa ? nombreOficial : rivalLimpio}</div>
+                <div class="nombreEquipo partido ${esCasa ? 'verde' : ''}">${ultimo.local}</div>
                 <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content; white-space: nowrap;">${ultimo.resultado}</div>
-                <div class="nombreEquipo partido ${!esCasa ? 'verde' : ''}">${!esCasa ? nombreOficial : rivalLimpio}</div>
+                <div class="nombreEquipo partido ${!esCasa ? 'verde' : ''}">${ultimo.visitante}</div>
             `;
             teamContainer.appendChild(lastDetails);
           }
 
           // --- 3. Bloque Próximo Partido ---
-          if (proximo) {
-            const nextTitle = document.createElement("div");
-            nextTitle.className = "titleInfo";
+          
+          const nextTitle = document.createElement("div");
+          nextTitle.className = "titleInfo";
 
-            var jornadaLimpia = proximo.infoJornada
-              .replace(/schedule/gi, '')
-              .replace(/get_app/gi, '')
-              .trim();
+          const refClas = doc(db, "seguimiento_futbol", `lista_partidos_cartagena`);
+          const snapClas = await getDoc(refClas);
+          const data = snapClas.data();
+          const tablaData = data.partidos;
 
-            jornadaLimpia = jornadaLimpia.replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/, (match, d, m, y) => {
-                const dia = d.padStart(2, '0');
-                const mes = m.padStart(2, '0');
-                return `${dia}/${mes}/${y}`;
-            });
+          const jornadaN = parseInt(jornada) + 1;
+          
+          const fecha = tablaData[0].fecha;
+          const hora = tablaData[0].resultado_hora;
 
-            const jornada = jornadaLimpia.split(' - ')[0].split(' - ')[0];
-            const fecha = jornadaLimpia.split(' - ')[1].split(' - ')[0];
+          nextTitle.innerHTML = `<h3>JORNADA ${jornadaN} (${formatearFechaSofa(fecha)})</h3>`;
+          teamContainer.appendChild(nextTitle);
 
-            nextTitle.innerHTML = `<h3>${jornada} (${limpiarFecha(proximo.resultado)})</h3>`;
-            teamContainer.appendChild(nextTitle);
+          const nextDetails = document.createElement("div");
+          nextDetails.className = "detailsDiv";
 
-            const nextDetails = document.createElement("div");
-            nextDetails.className = "detailsDiv";
+          const esCasaProx = tablaData[0].equipo_1.includes("Cartagena");
 
-            const esCasaProx = proximo.rival.includes("(C)");
-            const rivalProxLimpio = proximo.rival.replace("(C)", "").replace("(F)", "").trim();
-            proximo.resultado = proximo.resultado.replace("S-", "");
-            proximo.resultado = proximo.resultado.replace("D-", "");
-
-            function convertirHora24h(stringSucio) {
-                  // 1. Extraemos la parte de la hora y el meridiano (ej: "6:00 PM")
-                  const match = stringSucio.match(/(\d{1,2}):(\d{2})\s?(AM|PM)/i);
-                  if (!match) return null;
-
-                  let [_, horas, minutos, meridiano] = match;
-                  horas = parseInt(horas);
-
-                  // 2. Lógica de conversión
-                  if (meridiano.toUpperCase() === 'PM' && horas < 12) {
-                      horas += 12;
-                  } else if (meridiano.toUpperCase() === 'AM' && horas === 12) {
-                      horas = 0;
-                  }
-
-                  // 3. Formateamos con ceros a la izquierda (ej: "06:00" o "18:00")
-                  const horaFinal = horas.toString().padStart(2, '0');
-                  return `${horaFinal}:${minutos}`;
-              }
-
-            nextDetails.innerHTML = `
-                <div class="nombreEquipo partido ${esCasaProx ? 'verde' : ''}">${esCasaProx ? nombreOficial : rivalProxLimpio}</div>
-                <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content;">${convertirHora24h(proximo.resultado)}</div>
-                <div class="nombreEquipo partido ${!esCasaProx ? 'verde' : ''}">${!esCasaProx ? nombreOficial : rivalProxLimpio}</div>
-            `;
-            teamContainer.appendChild(nextDetails);
-          }
+          nextDetails.innerHTML = `
+              <div class="nombreEquipo partido ${esCasaProx ? 'verde' : ''}">${tablaData[0].equipo_1}</div>
+              <div class="partido" style="font-size: 25px; font-style: italic; width: fit-content;">${hora}</div>
+              <div class="nombreEquipo partido ${!esCasaProx ? 'verde' : ''}">${tablaData[0].equipo_2}</div>
+          `;
+          teamContainer.appendChild(nextDetails);
 
           cargaCalendario();
           
@@ -1436,6 +1367,32 @@
                     const dSemana = fechaIter.getDay();
 
                     let elemento = document.createElement("div");
+
+                    if (dia === 1 && dSemana === 0) {
+                      elemento.style.backgroundColor = "#333333";
+                      elemento.style.borderRadius = "4px";
+                      elemento.style.display = "flex";
+                      elemento.style.justifyContent = "center";
+                      elemento.style.alignItems = "center";
+                      elemento.style.position = "relative";
+                      elemento.style.minHeight = "40px";
+                      elemento.style.aspectRatio = "1.6 / 1"
+                      elemento.style.gridColumn = "7 / span 1"; // Última columna del grid
+
+                      const esHoyDom = (dia === HOY.getDate() && mes === HOY.getMonth() && anio === HOY.getFullYear());
+                      if (esHoyDom) elemento.style.backgroundColor = "#ff4444";
+
+                      // Número Domingo (Superior Derecha)
+                      const numDom = document.createElement("span");
+                      numDom.innerText = dia;
+                      numDom.style.cssText = `position:absolute; top:2px; right:4px; font-size:0.55em; color:${esHoyDom ? '#fff' : '#aaa'};`;
+                      elemento.appendChild(numDom);
+                      
+                      // Aquí podrías añadir la lógica de búsqueda de partido para este domingo solitario si quisieras
+                      
+                      grid.appendChild(elemento);
+                      continue; // Saltamos a la siguiente iteración (día 2)
+                    }
 
                     if (dSemana === 6 || (dSemana === 0 && dia !== 1)) {
                         if (dSemana === 6) {
