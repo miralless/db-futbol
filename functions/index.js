@@ -553,32 +553,65 @@ const ultimoResultado = await page.evaluate((nFiltro) => {
         ];
 
         for (const j of jugadoresLP) {
-            const page = await browser.newPage();
-            try {
-                await page.goto(j.url, { waitUntil: 'networkidle2' });
-                const stats = await page.evaluate((n, jE, jD, jC) => {
-                    const res = { nombre: n, PJ: "0", NJ: "0", Tit: "0", Sup: "0", Goles: "0", Am: "0", Roj: "0" };
-                    const fila = document.querySelector('#estadisticasJugador tr.totales');
-                    if (fila) {
-                        const ths = Array.from(fila.querySelectorAll('th'));
-                        res.PJ = ths[1]?.innerText.match(/Jugados:\s*(\d+)/)?.[1] || "0";
-                        res.Tit = ths[2]?.innerText.trim() || "0";
-                        res.Goles = ths[4]?.innerText.trim() || "0";
-                        res.Am = ths[5]?.innerText.trim() || "0";
-                        res.Roj = ths[6]?.innerText.trim() || "0";
-                        res.Sup = (parseInt(res.PJ) - parseInt(res.Tit)).toString();
-                    }
-                    let jT = 0;
-                    if (n === "Ekain Etxebarria") jT = jE;
-                    else if (n === "Jon García") jT = jD;
-                    else if (n === "Eneko Ebro") jT = jC;
-                    res.NJ = Math.max(0, jT - parseInt(res.PJ)).toString();
-                    return res;
-                }, j.nombre, jEibarB, jDerio, jCartagena);
-                baseDeDatosFutbol.push({ tipo: "jugador", origen: "LaPreferente", ...stats });
-            } catch (e) { console.error(`❌ Error Jugador ${j.nombre}` + e); }
-            await page.close();
-        }
+    const page = await browser.newPage();
+    try {
+        // Usamos la misma configuración de espera que en clasificación
+        await page.goto(j.url, { waitUntil: 'networkidle2' });
+
+        const stats = await page.evaluate((n, jE, jD, jC) => {
+            const res = { nombre: n, PJ: "0", NJ: "0", Tit: "0", Sup: "0", Goles: "0", Am: "0", Roj: "0" };
+            
+            // Usamos getElementById como en la clasificación
+            const tabla = document.getElementById('estadisticasJugador');
+            if (!tabla) return res;
+
+            // Buscamos la fila de totales (que en esta tabla está en el tfoot o como clase 'totales')
+            const filaTotales = tabla.querySelector('tr.totales');
+            
+            if (filaTotales) {
+                // Obtenemos las celdas (th/td) igual que en clasificación
+                const celdas = Array.from(filaTotales.querySelectorAll('th, td'));
+
+                // Mapeo manual de índices basado en la estructura de LaPreferente
+                // ths[1] suele ser "Jugados: X"
+                const pjTexto = celdas[1]?.innerText || "";
+                const matchPJ = pjTexto.match(/\d+/);
+                res.PJ = matchPJ ? matchPJ[0] : "0";
+
+                res.Tit = celdas[2]?.innerText.trim() || "0";
+                res.Goles = celdas[4]?.innerText.trim() || "0";
+                res.Am = celdas[5]?.innerText.trim() || "0";
+                res.Roj = celdas[6]?.innerText.trim() || "0";
+
+                // Cálculos numéricos
+                const pjInt = parseInt(res.PJ, 10) || 0;
+                const titInt = parseInt(res.Tit, 10) || 0;
+                res.Sup = (pjInt - titInt).toString();
+
+                let jT = 0;
+                if (n === "Ekain Etxebarria") jT = jE;
+                else if (n === "Jon García") jT = jD;
+                else if (n === "Eneko Ebro") jT = jC;
+
+                res.NJ = Math.max(0, jT - pjInt).toString();
+            }
+            return res;
+        }, j.nombre, jEibarB, jDerio, jCartagena);
+
+        baseDeDatosFutbol.push({ 
+            tipo: "jugador", 
+            origen: "LaPreferente", 
+            ...stats 
+        });
+        
+        console.log(`✅ Datos de jugador extraídos: ${j.nombre}`);
+
+    } catch (e) { 
+        console.error(`❌ Error Jugador ${j.nombre}: `, e.message); 
+    } finally {
+        await page.close();
+    }
+}
 
         // --- 4. JUGADORES (FEDERACIÓN) ---
         const jugadoresFED = [
