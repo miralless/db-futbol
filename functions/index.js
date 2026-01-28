@@ -299,6 +299,11 @@ const ultimoResultado = await page.evaluate((nFiltro) => {
             });
 
             if (tablaCartagena.length > 0) {
+                tablaCartagena.forEach(element => {
+                    if (element.nombre == "F.C. Cartagena") {
+                        jCartagena = element.Jugados;
+                    }
+                });
                 // Lo guardamos en tu array de base de datos
                 baseDeDatosFutbol.push({ 
                     nombre: "FC Cartagena", 
@@ -349,6 +354,11 @@ const ultimoResultado = await page.evaluate((nFiltro) => {
             });
 
             if (tablaEibar.length > 0) {
+                tablaEibar.forEach(element => {
+                    if (element.nombre == "S.D. Eibar B") {
+                        jEibarB = element.Jugados;
+                    }
+                });
                 // Lo guardamos en tu array de base de datos
                 baseDeDatosFutbol.push({ 
                     nombre: "Eibar B", 
@@ -399,6 +409,11 @@ const ultimoResultado = await page.evaluate((nFiltro) => {
             });
 
             if (tablaDerio.length > 0) {
+                tablaDerio.forEach(element => {
+                    if (element.nombre == "C.D. Derio") {
+                        jDerio = element.Jugados;
+                    }
+                });
                 // Lo guardamos en tu array de base de datos
                 baseDeDatosFutbol.push({ 
                     nombre: "CD Derio", 
@@ -538,74 +553,32 @@ const ultimoResultado = await page.evaluate((nFiltro) => {
         ];
 
         for (const j of jugadoresLP) {
-    const page = await browser.newPage();
-    
-    // Mismo User Agent que usas para la clasificación
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-
-    try {
-        console.log(`👤 Procesando: ${j.nombre}...`);
-        
-        // 1. Navegar y esperar a que la red se calme
-        await page.goto(j.url, { waitUntil: 'networkidle2', timeout: 60000 });
-
-        // 2. ACEPTAR COOKIES (Vital en GitHub Actions para que el DOM se limpie)
-        try {
-            // Buscamos el botón de aceptar de LaPreferente (suele ser .cc-dismiss o similar)
-            await page.waitForSelector('.cc-dismiss, #px-captcha, button[id*="cookie"]', { timeout: 3000 });
-            await page.click('.cc-dismiss');
-            await new Promise(r => setTimeout(r, 1000));
-        } catch (e) {
-            // Si no hay banner, seguimos
+            const page = await browser.newPage();
+            try {
+                await page.goto(j.url, { waitUntil: 'domcontentloaded' });
+                const stats = await page.evaluate((n, jE, jD, jC) => {
+                    const res = { nombre: n, PJ: "0", NJ: "0", Tit: "0", Sup: "0", Goles: "0", Am: "0", Roj: "0" };
+                    const fila = document.querySelector('#estadisticasJugador tr.totales');
+                    if (fila) {
+                        const ths = Array.from(fila.querySelectorAll('th'));
+                        res.PJ = ths[1]?.innerText.match(/Jugados:\s*(\d+)/)?.[1] || "0";
+                        res.Tit = ths[2]?.innerText.trim() || "0";
+                        res.Goles = ths[4]?.innerText.trim() || "0";
+                        res.Am = ths[5]?.innerText.trim() || "0";
+                        res.Roj = ths[6]?.innerText.trim() || "0";
+                        res.Sup = (parseInt(res.PJ) - parseInt(res.Tit)).toString();
+                    }
+                    let jT = 0;
+                    if (n === "Ekain Etxebarria") jT = jE;
+                    else if (n === "Jon García") jT = jD;
+                    else if (n === "Eneko Ebro") jT = jC;
+                    res.NJ = Math.max(0, jT - parseInt(res.PJ)).toString();
+                    return res;
+                }, j.nombre, jEibarB, jDerio, jCartagena);
+                baseDeDatosFutbol.push({ tipo: "jugador", origen: "LaPreferente", ...stats });
+            } catch (e) { console.error(`❌ Error Jugador ${j.nombre}` + e); }
+            await page.close();
         }
-
-        // 3. ESPERAR A LA TABLA POR CLASE (en lugar de ID)
-        // Usamos el mismo método que te funciona en clasificación: buscar la tabla
-        await page.waitForSelector('table.lpfTable01, tr.totales', { timeout: 15000 });
-
-        const stats = await page.evaluate((n, jE, jD, jC) => {
-            // Intentamos buscar por la fila 'totales' que es única
-            const fila = document.querySelector('tr.totales');
-            if (!fila) return null;
-
-            const ths = Array.from(fila.querySelectorAll('th, td'));
-            const res = { nombre: n, PJ: "0", NJ: "0", Tit: "0", Sup: "0", Goles: "0", Am: "0", Roj: "0" };
-
-            // Función interna para limpiar números
-            const nmb = (t) => t?.replace(/\D/g, '') || "0";
-
-            res.PJ = nmb(ths[1]?.innerText);
-            res.Tit = nmb(ths[2]?.innerText);
-            res.Goles = nmb(ths[4]?.innerText);
-            res.Am = nmb(ths[5]?.innerText);
-            res.Roj = nmb(ths[6]?.innerText);
-            
-            const pjInt = parseInt(res.PJ, 10);
-            const titInt = parseInt(res.Tit, 10);
-            res.Sup = (pjInt - titInt).toString();
-
-            let jT = 0;
-            if (n === "Ekain Etxebarria") jT = jE;
-            else if (n === "Jon García") jT = jD;
-            else if (n === "Eneko Ebro") jT = jC;
-
-            res.NJ = Math.max(0, jT - pjInt).toString();
-            return res;
-        }, j.nombre, jEibarB, jDerio, jCartagena);
-
-        if (stats) {
-            baseDeDatosFutbol.push({ tipo: "jugador", origen: "LaPreferente", ...stats });
-            console.log(`✅ ${j.nombre} guardado.`);
-        } else {
-            console.log(`⚠️ No se encontró la fila de totales para ${j.nombre}`);
-        }
-
-    } catch (e) {
-        console.error(`❌ Error en ${j.nombre}: Selector no encontrado.`);
-    } finally {
-        await page.close();
-    }
-}
 
         // --- 4. JUGADORES (FEDERACIÓN) ---
         const jugadoresFED = [
