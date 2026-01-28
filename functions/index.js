@@ -540,83 +540,68 @@ const ultimoResultado = await page.evaluate((nFiltro) => {
         for (const j of jugadoresLP) {
     const page = await browser.newPage();
     
-    // 1. Forzar cabeceras de un navegador real
-    await page.setExtraHTTPHeaders({
-        'Accept-Language': 'es-ES,es;q=0.9'
-    });
-
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36');
+    // Mismo User Agent que usas para la clasificación
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
     try {
-        console.log(`👤 Scrapeando jugador: ${j.nombre}...`);
+        console.log(`👤 Procesando: ${j.nombre}...`);
         
-        // 2. Navegación con tiempo de espera largo y 'networkidle2'
-        await page.goto(j.url, { 
-            waitUntil: 'networkidle2', 
-            timeout: 60000 
-        });
+        // 1. Navegar y esperar a que la red se calme
+        await page.goto(j.url, { waitUntil: 'networkidle2', timeout: 60000 });
 
-        // 3. Pequeño scroll para simular actividad humana y activar carga perezosa
-        await page.evaluate(() => window.scrollBy(0, 500));
-        await new Promise(r => setTimeout(r, 2000)); 
-
-        // 4. Buscar el selector pero con una alternativa por si el ID cambia
-        const tablaExiste = await page.evaluate(() => {
-            return !!document.querySelector('#estadisticasJugador') || 
-                   !!document.querySelector('.tabla-estadisticas') ||
-                   document.body.innerText.includes('PJ');
-        });
-
-        if (!tablaExiste) {
-            console.log(`   ⚠️ La tabla no aparece en el DOM de ${j.nombre}. Posible bloqueo.`);
+        // 2. ACEPTAR COOKIES (Vital en GitHub Actions para que el DOM se limpie)
+        try {
+            // Buscamos el botón de aceptar de LaPreferente (suele ser .cc-dismiss o similar)
+            await page.waitForSelector('.cc-dismiss, #px-captcha, button[id*="cookie"]', { timeout: 3000 });
+            await page.click('.cc-dismiss');
+            await new Promise(r => setTimeout(r, 1000));
+        } catch (e) {
+            // Si no hay banner, seguimos
         }
 
-        // Usamos un selector más genérico si el ID falla
-        await page.waitForSelector('tr.totales', { timeout: 15000 });
+        // 3. ESPERAR A LA TABLA POR CLASE (en lugar de ID)
+        // Usamos el mismo método que te funciona en clasificación: buscar la tabla
+        await page.waitForSelector('table.lpfTable01, tr.totales', { timeout: 15000 });
 
         const stats = await page.evaluate((n, jE, jD, jC) => {
-            const res = { nombre: n, PJ: "0", NJ: "0", Tit: "0", Sup: "0", Goles: "0", Am: "0", Roj: "0" };
-            
-            // Buscamos la fila totales en cualquier tabla del documento
+            // Intentamos buscar por la fila 'totales' que es única
             const fila = document.querySelector('tr.totales');
-            
-            if (fila) {
-                const ths = Array.from(fila.querySelectorAll('th, td'));
-                
-                // Limpieza de datos más agresiva
-                const extraerNumero = (txt) => {
-                    const m = txt.match(/\d+/);
-                    return m ? m[0] : "0";
-                };
+            if (!fila) return null;
 
-                res.PJ = extraerNumero(ths[1]?.innerText || "0");
-                res.Tit = extraerNumero(ths[2]?.innerText || "0");
-                res.Goles = extraerNumero(ths[4]?.innerText || "0");
-                res.Am = extraerNumero(ths[5]?.innerText || "0");
-                res.Roj = extraerNumero(ths[6]?.innerText || "0");
-                
-                const pjInt = parseInt(res.PJ, 10);
-                const titInt = parseInt(res.Tit, 10);
-                res.Sup = (pjInt - titInt).toString();
-                
-                let jT = 0;
-                if (n === "Ekain Etxebarria") jT = jE;
-                else if (n === "Jon García") jT = jD;
-                else if (n === "Eneko Ebro") jT = jC;
-                
-                res.NJ = Math.max(0, jT - pjInt).toString();
-            }
+            const ths = Array.from(fila.querySelectorAll('th, td'));
+            const res = { nombre: n, PJ: "0", NJ: "0", Tit: "0", Sup: "0", Goles: "0", Am: "0", Roj: "0" };
+
+            // Función interna para limpiar números
+            const nmb = (t) => t?.replace(/\D/g, '') || "0";
+
+            res.PJ = nmb(ths[1]?.innerText);
+            res.Tit = nmb(ths[2]?.innerText);
+            res.Goles = nmb(ths[4]?.innerText);
+            res.Am = nmb(ths[5]?.innerText);
+            res.Roj = nmb(ths[6]?.innerText);
+            
+            const pjInt = parseInt(res.PJ, 10);
+            const titInt = parseInt(res.Tit, 10);
+            res.Sup = (pjInt - titInt).toString();
+
+            let jT = 0;
+            if (n === "Ekain Etxebarria") jT = jE;
+            else if (n === "Jon García") jT = jD;
+            else if (n === "Eneko Ebro") jT = jC;
+
+            res.NJ = Math.max(0, jT - pjInt).toString();
             return res;
         }, j.nombre, jEibarB, jDerio, jCartagena);
 
-        baseDeDatosFutbol.push({ tipo: "jugador", origen: "LaPreferente", ...stats });
-        console.log(`✅ Datos de ${j.nombre} guardados.`);
+        if (stats) {
+            baseDeDatosFutbol.push({ tipo: "jugador", origen: "LaPreferente", ...stats });
+            console.log(`✅ ${j.nombre} guardado.`);
+        } else {
+            console.log(`⚠️ No se encontró la fila de totales para ${j.nombre}`);
+        }
 
-    } catch (e) { 
-        console.error(`❌ Error en ${j.nombre}.`);
-        // Opcional: imprimir una parte del body para ver qué está viendo el bot
-        // const body = await page.evaluate(() => document.body.innerText.slice(0, 200));
-        // console.log(`   Contenido parcial: ${body}`);
+    } catch (e) {
+        console.error(`❌ Error en ${j.nombre}: Selector no encontrado.`);
     } finally {
         await page.close();
     }
