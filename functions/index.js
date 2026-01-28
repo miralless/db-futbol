@@ -555,7 +555,7 @@ const ultimoResultado = await page.evaluate((nFiltro) => {
         for (const j of jugadoresLP) {
             const page = await browser.newPage();
             try {
-                await page.goto(j.url, { waitUntil: 'domcontentloaded' });
+                await page.goto(j.url, { waitUntil: 'networkidle2' });
                 const stats = await page.evaluate((n, jE, jD, jC) => {
                     const res = { nombre: n, PJ: "0", NJ: "0", Tit: "0", Sup: "0", Goles: "0", Am: "0", Roj: "0" };
                     const fila = document.querySelector('#estadisticasJugador tr.totales');
