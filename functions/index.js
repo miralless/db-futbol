@@ -537,62 +537,86 @@ const ultimoResultado = await page.evaluate((nFiltro) => {
             { nombre: "Jon García", url: "https://www.lapreferente.com/J355644C22283/cd-derio/jon.html" }
         ];
 
-for (const j of jugadoresLP) {
+        for (const j of jugadoresLP) {
     const page = await browser.newPage();
     
-    // IMPORTANTE: User Agent para evitar bloqueos en GitHub Actions
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-    await page.setViewport({ width: 1280, height: 800 });
+    // 1. Forzar cabeceras de un navegador real
+    await page.setExtraHTTPHeaders({
+        'Accept-Language': 'es-ES,es;q=0.9'
+    });
+
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36');
 
     try {
         console.log(`👤 Scrapeando jugador: ${j.nombre}...`);
         
-        // Usamos 'networkidle2' para asegurar que las tablas carguen
-        await page.goto(j.url, { waitUntil: 'networkidle2', timeout: 60000 });
+        // 2. Navegación con tiempo de espera largo y 'networkidle2'
+        await page.goto(j.url, { 
+            waitUntil: 'networkidle2', 
+            timeout: 60000 
+        });
 
-        // Esperar a que la tabla de estadísticas aparezca
-        // Si no aparece en 10 seg, lanzará error y pasará al catch
-        await page.waitForSelector('#estadisticasJugador', { timeout: 10000 });
+        // 3. Pequeño scroll para simular actividad humana y activar carga perezosa
+        await page.evaluate(() => window.scrollBy(0, 500));
+        await new Promise(r => setTimeout(r, 2000)); 
+
+        // 4. Buscar el selector pero con una alternativa por si el ID cambia
+        const tablaExiste = await page.evaluate(() => {
+            return !!document.querySelector('#estadisticasJugador') || 
+                   !!document.querySelector('.tabla-estadisticas') ||
+                   document.body.innerText.includes('PJ');
+        });
+
+        if (!tablaExiste) {
+            console.log(`   ⚠️ La tabla no aparece en el DOM de ${j.nombre}. Posible bloqueo.`);
+        }
+
+        // Usamos un selector más genérico si el ID falla
+        await page.waitForSelector('tr.totales', { timeout: 15000 });
 
         const stats = await page.evaluate((n, jE, jD, jC) => {
             const res = { nombre: n, PJ: "0", NJ: "0", Tit: "0", Sup: "0", Goles: "0", Am: "0", Roj: "0" };
             
-            // Selector más robusto: buscamos la fila con clase 'totales' dentro del tfoot o tbody
-            const fila = document.querySelector('#estadisticasJugador tr.totales');
+            // Buscamos la fila totales en cualquier tabla del documento
+            const fila = document.querySelector('tr.totales');
             
             if (fila) {
-                const ths = Array.from(fila.querySelectorAll('th'));
+                const ths = Array.from(fila.querySelectorAll('th, td'));
                 
-                // PJ: Extraer número del texto "Jugados: 15"
-                const matchPJ = ths[1]?.innerText.match(/\d+/);
-                res.PJ = matchPJ ? matchPJ[0] : "0";
+                // Limpieza de datos más agresiva
+                const extraerNumero = (txt) => {
+                    const m = txt.match(/\d+/);
+                    return m ? m[0] : "0";
+                };
+
+                res.PJ = extraerNumero(ths[1]?.innerText || "0");
+                res.Tit = extraerNumero(ths[2]?.innerText || "0");
+                res.Goles = extraerNumero(ths[4]?.innerText || "0");
+                res.Am = extraerNumero(ths[5]?.innerText || "0");
+                res.Roj = extraerNumero(ths[6]?.innerText || "0");
                 
-                res.Tit = ths[2]?.innerText.trim() || "0";
-                res.Goles = ths[4]?.innerText.trim() || "0";
-                res.Am = ths[5]?.innerText.trim() || "0";
-                res.Roj = ths[6]?.innerText.trim() || "0";
-                
-                // Cálculo de Suplente
-                const pjInt = parseInt(res.PJ, 10) || 0;
-                const titInt = parseInt(res.Tit, 10) || 0;
+                const pjInt = parseInt(res.PJ, 10);
+                const titInt = parseInt(res.Tit, 10);
                 res.Sup = (pjInt - titInt).toString();
                 
-                // Lógica de No Jugados (NJ)
-                let jornadasTotales = 0;
-                if (n === "Ekain Etxebarria") jornadasTotales = jE;
-                else if (n === "Jon García") jornadasTotales = jD;
-                else if (n === "Eneko Ebro") jornadasTotales = jC;
+                let jT = 0;
+                if (n === "Ekain Etxebarria") jT = jE;
+                else if (n === "Jon García") jT = jD;
+                else if (n === "Eneko Ebro") jT = jC;
                 
-                res.NJ = Math.max(0, jornadasTotales - pjInt).toString();
+                res.NJ = Math.max(0, jT - pjInt).toString();
             }
             return res;
         }, j.nombre, jEibarB, jDerio, jCartagena);
 
         baseDeDatosFutbol.push({ tipo: "jugador", origen: "LaPreferente", ...stats });
-        console.log(`✅ Datos de ${j.nombre} obtenidos.`);
+        console.log(`✅ Datos de ${j.nombre} guardados.`);
 
     } catch (e) { 
-        console.error(`❌ Error Jugador ${j.nombre}: ${e.message}`); 
+        console.error(`❌ Error en ${j.nombre}.`);
+        // Opcional: imprimir una parte del body para ver qué está viendo el bot
+        // const body = await page.evaluate(() => document.body.innerText.slice(0, 200));
+        // console.log(`   Contenido parcial: ${body}`);
     } finally {
         await page.close();
     }
