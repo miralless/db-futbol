@@ -537,33 +537,66 @@ const ultimoResultado = await page.evaluate((nFiltro) => {
             { nombre: "Jon García", url: "https://www.lapreferente.com/J355644C22283/cd-derio/jon.html" }
         ];
 
-        for (const j of jugadoresLP) {
-            const page = await browser.newPage();
-            try {
-                await page.goto(j.url, { waitUntil: 'domcontentloaded' });
-                const stats = await page.evaluate((n, jE, jD, jC) => {
-                    const res = { nombre: n, PJ: "0", NJ: "0", Tit: "0", Sup: "0", Goles: "0", Am: "0", Roj: "0" };
-                    const fila = document.querySelector('#estadisticasJugador tr.totales');
-                    if (fila) {
-                        const ths = Array.from(fila.querySelectorAll('th'));
-                        res.PJ = ths[1]?.innerText.match(/Jugados:\s*(\d+)/)?.[1] || "0";
-                        res.Tit = ths[2]?.innerText.trim() || "0";
-                        res.Goles = ths[4]?.innerText.trim() || "0";
-                        res.Am = ths[5]?.innerText.trim() || "0";
-                        res.Roj = ths[6]?.innerText.trim() || "0";
-                        res.Sup = (parseInt(res.PJ) - parseInt(res.Tit)).toString();
-                    }
-                    let jT = 0;
-                    if (n === "Ekain Etxebarria") jT = jE;
-                    else if (n === "Jon García") jT = jD;
-                    else if (n === "Eneko Ebro") jT = jC;
-                    res.NJ = Math.max(0, jT - parseInt(res.PJ)).toString();
-                    return res;
-                }, j.nombre, jEibarB, jDerio, jCartagena);
-                baseDeDatosFutbol.push({ tipo: "jugador", origen: "LaPreferente", ...stats });
-            } catch (e) { console.error(`❌ Error Jugador ${j.nombre}`); }
-            await page.close();
-        }
+for (const j of jugadoresLP) {
+    const page = await browser.newPage();
+    
+    // IMPORTANTE: User Agent para evitar bloqueos en GitHub Actions
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    await page.setViewport({ width: 1280, height: 800 });
+
+    try {
+        console.log(`👤 Scrapeando jugador: ${j.nombre}...`);
+        
+        // Usamos 'networkidle2' para asegurar que las tablas carguen
+        await page.goto(j.url, { waitUntil: 'networkidle2', timeout: 60000 });
+
+        // Esperar a que la tabla de estadísticas aparezca
+        // Si no aparece en 10 seg, lanzará error y pasará al catch
+        await page.waitForSelector('#estadisticasJugador', { timeout: 10000 });
+
+        const stats = await page.evaluate((n, jE, jD, jC) => {
+            const res = { nombre: n, PJ: "0", NJ: "0", Tit: "0", Sup: "0", Goles: "0", Am: "0", Roj: "0" };
+            
+            // Selector más robusto: buscamos la fila con clase 'totales' dentro del tfoot o tbody
+            const fila = document.querySelector('#estadisticasJugador tr.totales');
+            
+            if (fila) {
+                const ths = Array.from(fila.querySelectorAll('th'));
+                
+                // PJ: Extraer número del texto "Jugados: 15"
+                const matchPJ = ths[1]?.innerText.match(/\d+/);
+                res.PJ = matchPJ ? matchPJ[0] : "0";
+                
+                res.Tit = ths[2]?.innerText.trim() || "0";
+                res.Goles = ths[4]?.innerText.trim() || "0";
+                res.Am = ths[5]?.innerText.trim() || "0";
+                res.Roj = ths[6]?.innerText.trim() || "0";
+                
+                // Cálculo de Suplente
+                const pjInt = parseInt(res.PJ, 10) || 0;
+                const titInt = parseInt(res.Tit, 10) || 0;
+                res.Sup = (pjInt - titInt).toString();
+                
+                // Lógica de No Jugados (NJ)
+                let jornadasTotales = 0;
+                if (n === "Ekain Etxebarria") jornadasTotales = jE;
+                else if (n === "Jon García") jornadasTotales = jD;
+                else if (n === "Eneko Ebro") jornadasTotales = jC;
+                
+                res.NJ = Math.max(0, jornadasTotales - pjInt).toString();
+            }
+            return res;
+        }, j.nombre, jEibarB, jDerio, jCartagena);
+
+        baseDeDatosFutbol.push({ tipo: "jugador", origen: "LaPreferente", ...stats });
+        console.log(`✅ Datos de ${j.nombre} obtenidos.`);
+
+    } catch (e) { 
+        console.error(`❌ Error Jugador ${j.nombre}: ${e.message}`); 
+    } finally {
+        await page.close();
+    }
+}
 
         // --- 4. JUGADORES (FEDERACIÓN) ---
         const jugadoresFED = [
